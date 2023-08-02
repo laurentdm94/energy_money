@@ -10,9 +10,11 @@ globals [
 ]
 
 factories-own [
-  price  ; Price per unit of food
   stock  ; Stock of food
+  energy-to-produce ; Energy needed to produce one good
   pollution  ; Pollution when one unit of food produced
+  margin ; Margin done on the product.
+  price  ; Price per unit of food
 ]
 
 consumers-own [
@@ -33,15 +35,19 @@ to setup
     set food 10         ; Start with 0 food
     set ecoscore random 10 ; Random ecoscore between O and 10
   ]
+
   create-factories num-factories [
     set shape "factory"
     set color red
     set size 2
     setxy random-xcor random-ycor
-    set price random 8 + 1; Set a random price for food at each factory, add 1 to not have 0 price.
-    set stock 100       ; Start with 100 food in the stock
-    set pollution 9 - price ; Random level of pollution (inversely correlated with price)
+    set stock 100 ; Stock of food
+    set energy-to-produce 1 + random 4; Energy needed to produce one good
+    set pollution random 5; Pollution when one unit of food produced
+    set margin 5 - pollution; Margin done on the product. The less pollution (that includes energy) the more margin one can make by selling it to rich agents.
+    set price energy-to-produce + margin ; Price per unit of food
   ]
+
   set total-money sum [money] of consumers
   set total-pollution 0
   set total-food sum [food] of consumers
