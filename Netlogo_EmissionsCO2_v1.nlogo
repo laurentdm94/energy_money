@@ -25,6 +25,7 @@ factories-own [
   foodstock  ; Stock of food
 
   target-foodstock ; Target stock of food
+  need-energy ; If the factory needs to buy energy.
 ]
 
 consumers-own [
@@ -41,9 +42,9 @@ to setup
     set color blue
     setxy random-xcor random-ycor
 
-    set money 10 ; Assign a random amount of money to each consumer
-    set salary random 10
-    set food 10         ; Start with 0 food
+    set money random 100 ; Assign a random amount of money to each consumer
+    set salary 10 + random 10
+    set food 10 + random 10 ; Start with 10 food
     set ecoscore random 10 ; Random ecoscore between O and 10
   ]
 
@@ -58,11 +59,12 @@ to setup
     set margin 5 - pollution; The less pollution the more margin one can make by selling it to rich agents.
     set price (energy-to-produce * energy-price) + margin
 
-    set funds random 5
-    set energy random 5
-    set foodstock random 5
+    set funds 5 + random 50
+    set energy 5 + random 5
+    set foodstock 5 + random 5
 
-    set target-foodstock random 50
+    set target-foodstock 5 + random 50
+    set need-energy false
   ]
 
   set total-money sum [money] of consumers
@@ -74,8 +76,7 @@ end
 
 to produce-goods
   ask factories [
-    if foodstock < target-foodstock [
-      if energy > energy-to-produce [
+    while [foodstock < target-foodstock and energy >= energy-to-produce] [
         set energy energy - energy-to-produce
         set foodstock foodstock + 1
 
@@ -83,9 +84,16 @@ to produce-goods
         set total-co2 total-co2 + energy-to-produce ; Increase total-c02 based on the amount produced
       ]
       ; If the factory is running out of energy, buy some
-      if energy < energy-to-produce [
+      ifelse energy < energy-to-produce [
         ; try to buy some energy on the market, therefore state intent
+        set need-energy true
         set energy-demand energy-demand + energy-to-produce
+      ] [
+        set need-energy false
+      ]
+
+      if funds < energy-price and foodstock = 0 and energy < energy-to-produce [
+        die
       ]
     ]
   ]
@@ -93,9 +101,9 @@ end
 
 to buy-energy
   ask factories [
-    if funds < (energy-price * energy-to-produce) [
-      set funds funds - (energy-price * energy-to-produce)
-      set energy energy + energy-to-produce
+    if need-energy and funds > energy-price [
+        set funds funds - energy-price
+        set energy energy + 1
     ]
   ]
 end
@@ -125,16 +133,21 @@ to buy-from-factory [target-factory]
   let max-goods min (list target-stock (money / target-price))
 
   if ecoscore <= 10 - target-pollution and max-goods > 0 [
+    ; compute price paid
+    let price_paid (target-price * max-goods)
+
+    ;do the transfers of food and money
     ask target-factory [
       set foodstock foodstock - max-goods ; Decrease factory stock by the amount sold
+      set funds funds + price_paid ; Increase factory funds by the amount sold
     ]
-    set money money - (target-price * max-goods) ; Adjust money based on the amount bought
+    set money money - price_paid; Adjust money based on the amount bought
     set food food + max-goods ; Increase food by the amount bought
   ]
 end
 
 to go
-  set energy-offer 50 + random 50 ; extract a random amount of energy.
+  set energy-offer 75 + random 50 ; extract a random amount of energy.
   set energy-demand 0
   produce-goods
   move-consumers
@@ -284,7 +297,7 @@ num-consumers
 num-consumers
 0
 100
-100.0
+39.0
 1
 1
 NIL
@@ -298,8 +311,8 @@ SLIDER
 num-factories
 num-factories
 0
-100
-100.0
+500
+500.0
 1
 1
 NIL
