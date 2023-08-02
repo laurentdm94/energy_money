@@ -44,7 +44,7 @@ to setup
     set stock 100 ; Stock of food
     set energy-to-produce 1 + random 4; Energy needed to produce one good
     set pollution random 5; Pollution when one unit of food produced
-    set margin 5 - pollution; Margin done on the product. The less pollution (that includes energy) the more margin one can make by selling it to rich agents.
+    set margin 5 - pollution; Margin done on the product. The less pollution the more margin one can make by selling it to rich agents.
     set price energy-to-produce + margin ; Price per unit of food
   ]
 
