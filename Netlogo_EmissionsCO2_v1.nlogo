@@ -6,7 +6,9 @@ globals [
   total-money
   total-stock
   total-food
-  total-pollution
+  total-pollution ; polution of the direct environment (depending on production norms)
+  total-co2 ; polution of the inderect environment (depending on co2 production and therefore energy consumption)
+
   energy-offer ; energy extracted from the environment that is on the market (random set at each tick)
   energy-demand ; demand of energy on the market (recalculated at each tick)
   energy-price ; price of the energy on the market (recalculated at each tick)
@@ -76,6 +78,9 @@ to produce-goods
       if energy > energy-to-produce [
         set energy energy - energy-to-produce
         set foodstock foodstock + 1
+
+        set total-pollution total-pollution + pollution ; Increase total-pollution based on the amount produced
+        set total-co2 total-co2 + energy-to-produce ; Increase total-c02 based on the amount produced
       ]
       ; If the factory is running out of energy, buy some
       if energy < energy-to-produce [
@@ -122,7 +127,6 @@ to buy-from-factory [target-factory]
   if ecoscore <= 10 - target-pollution and max-goods > 0 [
     ask target-factory [
       set foodstock foodstock - max-goods ; Decrease factory stock by the amount sold
-      set total-pollution total-pollution + (max-goods * pollution) ; Increase total-pollution based on the amount sold
     ]
     set money money - (target-price * max-goods) ; Adjust money based on the amount bought
     set food food + max-goods ; Increase food by the amount bought
@@ -135,7 +139,6 @@ to go
   produce-goods
   move-consumers
   set energy-price (energy-demand / energy-offer)
-  ; Add any other behaviors for factories if needed
   buy-energy
   tick
 end
@@ -281,7 +284,7 @@ num-consumers
 num-consumers
 0
 100
-12.0
+100.0
 1
 1
 NIL
