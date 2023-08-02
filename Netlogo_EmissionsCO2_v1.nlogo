@@ -7,14 +7,22 @@ globals [
   total-stock
   total-food
   total-pollution
+  energy-offer ; energy extracted from the environment that is on the market (random set at each tick)
+  energy-demand ; demand of energy on the market (recalculated at each tick)
+  energy-price ; price of the energy on the market (recalculated at each tick)
 ]
 
 factories-own [
-  stock  ; Stock of food
   energy-to-produce ; Energy needed to produce one good
   pollution  ; Pollution when one unit of food produced
   margin ; Margin done on the product.
   price  ; Price per unit of food
+
+  funds ; Money held by the factory
+  energy ; Stock of energy
+  foodstock  ; Stock of food
+
+  target-foodstock ; Target stock of food
 ]
 
 consumers-own [
@@ -30,6 +38,7 @@ to setup
     set shape "person"
     set color blue
     setxy random-xcor random-ycor
+
     set money 10 ; Assign a random amount of money to each consumer
     set salary random 10
     set food 10         ; Start with 0 food
@@ -41,18 +50,49 @@ to setup
     set color red
     set size 2
     setxy random-xcor random-ycor
-    set stock 100 ; Stock of food
-    set energy-to-produce 1 + random 4; Energy needed to produce one good
-    set pollution random 5; Pollution when one unit of food produced
-    set margin 5 - pollution; Margin done on the product. The less pollution the more margin one can make by selling it to rich agents.
-    set price energy-to-produce + margin ; Price per unit of food
+
+    set energy-to-produce 1 + random 4
+    set pollution random 5
+    set margin 5 - pollution; The less pollution the more margin one can make by selling it to rich agents.
+    set price (energy-to-produce * energy-price) + margin
+
+    set funds random 5
+    set energy random 5
+    set foodstock random 5
+
+    set target-foodstock random 50
   ]
 
   set total-money sum [money] of consumers
   set total-pollution 0
   set total-food sum [food] of consumers
-  set total-stock sum [stock] of factories
+  set total-stock sum [foodstock] of factories
   reset-ticks
+end
+
+to produce-goods
+  ask factories [
+    if foodstock < target-foodstock [
+      if energy > energy-to-produce [
+        set energy energy - energy-to-produce
+        set foodstock foodstock + 1
+      ]
+      ; If the factory is running out of energy, buy some
+      if energy < energy-to-produce [
+        ; try to buy some energy on the market, therefore state intent
+        set energy-demand energy-demand + energy-to-produce
+      ]
+    ]
+  ]
+end
+
+to buy-energy
+  ask factories [
+    if funds < (energy-price * energy-to-produce) [
+      set funds funds - (energy-price * energy-to-produce)
+      set energy energy + energy-to-produce
+    ]
+  ]
 end
 
 to move-consumers
@@ -75,13 +115,13 @@ end
 
 to buy-from-factory [target-factory]
   let target-price [price] of target-factory
-  let target-stock [stock] of target-factory
+  let target-stock [foodstock] of target-factory
   let target-pollution [pollution] of target-factory
   let max-goods min (list target-stock (money / target-price))
 
   if ecoscore <= 10 - target-pollution and max-goods > 0 [
     ask target-factory [
-      set stock stock - max-goods ; Decrease factory stock by the amount sold
+      set foodstock foodstock - max-goods ; Decrease factory stock by the amount sold
       set total-pollution total-pollution + (max-goods * pollution) ; Increase total-pollution based on the amount sold
     ]
     set money money - (target-price * max-goods) ; Adjust money based on the amount bought
@@ -90,8 +130,13 @@ to buy-from-factory [target-factory]
 end
 
 to go
+  set energy-offer 50 + random 50 ; extract a random amount of energy.
+  set energy-demand 0
+  produce-goods
   move-consumers
+  set energy-price (energy-demand / energy-offer)
   ; Add any other behaviors for factories if needed
+  buy-energy
   tick
 end
 @#$#@#$#@
@@ -236,7 +281,7 @@ num-consumers
 num-consumers
 0
 100
-50.0
+12.0
 1
 1
 NIL
@@ -251,11 +296,29 @@ num-factories
 num-factories
 0
 100
-10.0
+100.0
 1
 1
 NIL
 HORIZONTAL
+
+PLOT
+697
+38
+897
+188
+Energy price
+time
+Energy-price
+0.0
+100.0
+0.0
+5.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot energy-price"
 
 @#$#@#$#@
 ## WHAT IS IT?
