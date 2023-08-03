@@ -1,144 +1,114 @@
-breed [factories factory]
-breed [consumers consumer]
-breed [ecoconsumers ecoconsumer]
+breed [farmers farmer]
 
 globals [
   total-money
   total-stock
   total-food
   total-pollution ; polution of the direct environment (depending on production norms)
-  total-co2 ; polution of the inderect environment (depending on co2 production and therefore energy consumption)
+  total-co2 ; polution of the inderect environment (depending on co2 production and therefore food production)
 
-  energy-offer ; energy extracted from the environment that is on the market (random set at each tick)
-  energy-demand ; demand of energy on the market (recalculated at each tick)
-  energy-price ; price of the energy on the market (recalculated at each tick)
+  food-demand ; farmers needing food
+  food-offer ; food on the market
+  food-price ; price of the food on the market
 ]
 
-factories-own [
-  energy-to-produce ; Energy needed to produce one good
+farmers-own [
+  food-to-produce ; food needed to produce one good
   pollution  ; Pollution when one unit of food produced
   margin ; Margin done on the product.
   price  ; Price per unit of food
 
-  funds ; Money held by the factory
-  energy ; Stock of energy
-  foodstock  ; Stock of food
+  productstock  ; Stock of food to sell. farmers do not eat the food they produce.
 
-  target-foodstock ; Target stock of food
-  need-energy ; If the factory needs to buy energy.
-]
+  target-productstock ; Target stock of food
+  need-food ; If the farmer needs to buy food.
 
-consumers-own [
   money  ; Stock of money
-  salary ; Income per tick
   food ; Stock of food
   ecoscore ; Sensibility to ecology
 ]
 
 to setup
   clear-all
-  create-consumers num-consumers [
+  create-farmers num-farmers [
     set shape "person"
     set color blue
     setxy random-xcor random-ycor
 
     set money random 100 ; Assign a random amount of money to each consumer
-    set salary 10 + random 10
-    set food 10 + random 10 ; Start with 10 food
-    set ecoscore random 10 ; Random ecoscore between O and 10
-  ]
+    set food 100 + random 10 ; Start with 10 food
+    set ecoscore random 10 ; Random ecoscore between O and 1
 
-  create-factories num-factories [
-    set shape "factory"
-    set color red
-    set size 2
-    setxy random-xcor random-ycor
-
-    set energy-to-produce 1 + random 4
+    set food-to-produce (1 + random 4) / 5
     set pollution random 5
     set margin 5 - pollution; The less pollution the more margin one can make by selling it to rich agents.
-    set price (energy-to-produce * energy-price) + margin
+    set price (food-to-produce * food-price) + margin
 
-    set funds 5 + random 50
-    set energy 5 + random 5
-    set foodstock 5 + random 5
+    set productstock 50 + random 5
 
-    set target-foodstock 5 + random 50
-    set need-energy false
+    set target-productstock 50 + random 50
+    set need-food false
   ]
 
-  set total-money sum [money] of consumers
+  set total-money sum [money] of farmers
   set total-pollution 0
-  set total-food sum [food] of consumers
-  set total-stock sum [foodstock] of factories
+  set total-food sum [food] of farmers
+  set total-stock sum [productstock] of farmers
   reset-ticks
 end
 
 to produce-goods
-  ask factories [
-    while [foodstock < target-foodstock and energy >= energy-to-produce] [
-        set energy energy - energy-to-produce
-        set foodstock foodstock + 1
+  ask farmers [
+    while [productstock < target-productstock and food >= food-to-produce] [
+        set food food - food-to-produce
+        set productstock productstock + 1
 
         set total-pollution total-pollution + pollution ; Increase total-pollution based on the amount produced
-        set total-co2 total-co2 + energy-to-produce ; Increase total-c02 based on the amount produced
+        set total-co2 total-co2 + food-to-produce ; Increase total-c02 based on the amount produced
       ]
-      ; If the factory is running out of energy, buy some
-      ifelse energy < energy-to-produce [
-        ; try to buy some energy on the market, therefore state intent
-        set need-energy true
-        set energy-demand energy-demand + energy-to-produce
+      ; If the farmer is running out of food to produce his own
+      ifelse food < food-to-produce [
+        ; try to buy some food on the market, therefore state intent
+        set need-food true
+        set food-demand food-demand + food-to-produce
       ] [
-        set need-energy false
-      ]
-
-      if funds < energy-price and foodstock = 0 and energy < energy-to-produce [
-        die
+        set need-food false
       ]
     ]
 end
 
-to buy-energy
-  ask factories [
-    if need-energy and funds > energy-price [
-        set funds funds - energy-price
-        set energy energy + 1
-    ]
-  ]
-end
-
-to move-consumers
-  ask consumers [
+to move-farmers
+  ask farmers [
     set food food - 1
+
     if food < 0 [
       die ; Consumer dies if food goes below zero
     ]
-    set money money + salary
     right random 45
     left random 45
     fd 1
-    let target-factory one-of factories-on patch-here
-    if target-factory != nobody [
-      buy-from-factory target-factory
+    let target-farmer one-of farmers-on patch-here
+    if target-farmer != nobody [
+      buy-from-farmer target-farmer
     ]
   ]
-  set total-money sum [money] of consumers
+  set total-money sum [money] of farmers
 end
 
-to buy-from-factory [target-factory]
-  let target-price [price] of target-factory
-  let target-stock [foodstock] of target-factory
-  let target-pollution [pollution] of target-factory
-  let max-goods min (list target-stock (money / target-price))
+to buy-from-farmer [fellow-farmer]
+  let fellow-farmer-price [price] of fellow-farmer
+  let fellow-farmer-productstock [productstock] of fellow-farmer
+  let fellow-farmer-pollution [pollution] of fellow-farmer
+  let max-goods min (list fellow-farmer-productstock (money / fellow-farmer-price))
 
-  if ecoscore <= 10 - target-pollution and max-goods > 0 [
+  if ecoscore <= 10 - fellow-farmer-pollution and max-goods > 0 [
     ; compute price paid
-    let price_paid (target-price * max-goods)
+    let price_paid (fellow-farmer-price * max-goods)
 
     ;do the transfers of food and money
-    ask target-factory [
-      set foodstock foodstock - max-goods ; Decrease factory stock by the amount sold
-      set funds funds + price_paid ; Increase factory funds by the amount sold
+    ask fellow-farmer [
+      set productstock productstock - max-goods ; Decrease farmer productstock by the amount sold
+      set money money + price_paid ; Increase farmer funds by the amount sold
     ]
     set money money - price_paid; Adjust money based on the amount bought
     set food food + max-goods ; Increase food by the amount bought
@@ -146,12 +116,10 @@ to buy-from-factory [target-factory]
 end
 
 to go
-  set energy-offer 75 + random 50 ; extract a random amount of energy.
-  set energy-demand 0
+  set food-demand 0
   produce-goods
-  move-consumers
-  set energy-price (energy-demand / energy-offer)
-  buy-energy
+  move-farmers
+  set food-price (food-demand / 0.01 + sum [productstock] of farmers)
   tick
 end
 @#$#@#$#@
@@ -221,7 +189,7 @@ PLOT
 17
 1171
 167
-Total consumers
+Total farmers
 time
 count
 0.0
@@ -232,7 +200,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot count consumers"
+"default" 1.0 0 -16777216 true "" "plot count farmers"
 
 PLOT
 970
@@ -292,27 +260,12 @@ SLIDER
 115
 190
 148
-num-consumers
-num-consumers
+num-farmers
+num-farmers
 0
-100
-100.0
-1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-18
-161
-190
-194
-num-factories
-num-factories
-0
-500
-73.0
-1
+1000
+1000.0
+10
 1
 NIL
 HORIZONTAL
@@ -322,7 +275,7 @@ PLOT
 38
 897
 188
-Energy price
+Food price
 time
 Energy-price
 0.0
@@ -333,7 +286,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot energy-price"
+"default" 1.0 0 -16777216 true "" "plot food-price"
 
 @#$#@#$#@
 ## WHAT IS IT?
