@@ -6,6 +6,8 @@ globals [
   total-food
   total-pollution ; polution of the direct environment (depending on production norms)
   total-co2 ; polution of the inderect environment (depending on co2 production and therefore food production)
+  total-energy-margin ; sum of all energy extracted from environment into the food.
+  total-transactions ; sum of all money exchanged during a tick.
 
   food-demand ; farmers needing food
   food-offer ; food on the market
@@ -14,6 +16,7 @@ globals [
 
 farmers-own [
   food-to-produce ; food needed to produce one good
+  energy-margin ; energy margin between the food needed to produce new food and the quantity of food produced.
   pollution  ; Pollution when one unit of food produced
   margin ; Margin done on the product.
   price  ; Price per unit of food
@@ -39,7 +42,11 @@ to setup
     set food 100 + random 10 ; Start with 10 food
     set ecoscore random 10 ; Random ecoscore between O and 1
 
-    set food-to-produce (1 + random 4) / 5
+    ; To survive, farmers need to produce new food with less than they consumed.
+    ; Energy to produce food comes from them AND the sun (represented by <1 foodconsumed / foodproduced for the farmer).
+    set food-to-produce (1 + random 3) / 5
+    set energy-margin 1 - food-to-produce
+
     set pollution random 5
     set margin 5 - pollution; The less pollution the more margin one can make by selling it to rich agents.
     set price (food-to-produce * food-price) + margin
@@ -54,6 +61,8 @@ to setup
   set total-pollution 0
   set total-food sum [food] of farmers
   set total-stock sum [productstock] of farmers
+  set total-energy-margin sum [energy-margin] of farmers
+  set food-price 1
   reset-ticks
 end
 
@@ -74,6 +83,12 @@ to produce-goods
       ] [
         set need-food false
       ]
+
+    ; set new random food-to-produce needs
+    set price (food-to-produce * food-price) + margin
+    set food-to-produce (1 + random 3) / 5
+    set energy-margin 1 - food-to-produce
+
     ]
 end
 
@@ -88,7 +103,7 @@ to move-farmers
     left random 45
     fd 1
     let target-farmer one-of farmers-on patch-here
-    if target-farmer != nobody [
+    if target-farmer != nobody and target-farmer != self [
       buy-from-farmer target-farmer
     ]
   ]
@@ -103,23 +118,27 @@ to buy-from-farmer [fellow-farmer]
 
   if ecoscore <= 10 - fellow-farmer-pollution and max-goods > 0 [
     ; compute price paid
-    let price_paid (fellow-farmer-price * max-goods)
+    let price-paid (fellow-farmer-price * max-goods)
 
     ;do the transfers of food and money
     ask fellow-farmer [
       set productstock productstock - max-goods ; Decrease farmer productstock by the amount sold
-      set money money + price_paid ; Increase farmer funds by the amount sold
+      set money money + price-paid ; Increase farmer funds by the amount sold
     ]
-    set money money - price_paid; Adjust money based on the amount bought
+    set money money - price-paid; Adjust money based on the amount bought
     set food food + max-goods ; Increase food by the amount bought
+
+    set total-transactions total-transactions + price-paid
   ]
 end
 
 to go
   set food-demand 0
+  set total-transactions 0
   produce-goods
+  set food-price (food-demand / (0.0001 + sum [productstock] of farmers))
   move-farmers
-  set food-price (food-demand / 0.01 + sum [productstock] of farmers)
+  set total-energy-margin sum [energy-margin] of farmers
   tick
 end
 @#$#@#$#@
@@ -263,8 +282,8 @@ SLIDER
 num-farmers
 num-farmers
 0
-1000
-1000.0
+10000
+2930.0
 10
 1
 NIL
@@ -272,9 +291,9 @@ HORIZONTAL
 
 PLOT
 697
-38
+19
 897
-188
+169
 Food price
 time
 Energy-price
@@ -287,6 +306,42 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot food-price"
+
+PLOT
+697
+174
+897
+324
+Total transactions
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot total-transactions"
+
+PLOT
+698
+330
+898
+480
+Total energy net input
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot total-energy-margin"
 
 @#$#@#$#@
 ## WHAT IS IT?
