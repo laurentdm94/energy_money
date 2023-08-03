@@ -96,7 +96,6 @@ to produce-goods
         die
       ]
     ]
-  ]
 end
 
 to buy-energy
@@ -297,7 +296,7 @@ num-consumers
 num-consumers
 0
 100
-39.0
+100.0
 1
 1
 NIL
@@ -312,7 +311,7 @@ num-factories
 num-factories
 0
 500
-500.0
+73.0
 1
 1
 NIL
