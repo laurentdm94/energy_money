@@ -9,6 +9,8 @@ globals [
   total-energy-margin ; sum of all energy extracted from environment into the food.
   total-transactions ; sum of all money exchanged during a tick.
 
+  money-to-distribute ; money that dying farmers will give away to the community.
+
   food-demand ; farmers needing food
   food-offer ; food on the market
   food-price ; price of the food on the market
@@ -62,7 +64,14 @@ to setup
   set total-food sum [food] of farmers
   set total-stock sum [productstock] of farmers
   set total-energy-margin sum [energy-margin] of farmers
+  set total-co2 0
+  set total-transactions 0
+  set money-to-distribute 0
+
+  set food-demand 0
+  set food-offer 0
   set food-price 1
+
   reset-ticks
 end
 
@@ -97,6 +106,7 @@ to move-farmers
     set food food - 1
 
     if food < 0 [
+      set money-to-distribute money-to-distribute + money
       die ; Consumer dies if food goes below zero
     ]
     right random 45
@@ -132,12 +142,22 @@ to buy-from-farmer [fellow-farmer]
   ]
 end
 
+to distribute-money
+  set num-farmers count farmers
+  let money-for-farmer (money-to-distribute / num-farmers)
+  ask farmers [
+    set money money + money-for-farmer
+    set money-to-distribute money-to-distribute - money-for-farmer
+  ]
+end
+
 to go
   set food-demand 0
   set total-transactions 0
   produce-goods
   set food-price (food-demand / (0.0001 + sum [productstock] of farmers))
   move-farmers
+  distribute-money
   set total-energy-margin sum [energy-margin] of farmers
   tick
 end
