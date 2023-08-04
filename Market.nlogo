@@ -46,8 +46,8 @@ to compute-eq-price
   ; compute price for which offer equals demand
   while [quantity-buyers - quantity-sellers > 0] [
     set equilibrium-price equilibrium-price + 1
-    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-    set quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price]
+    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price and products < target-stock]
+    set quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price and products > target-stock]
   ]
 end
 
@@ -60,7 +60,7 @@ to exchange-goods
     let max-price willingness-to-pay
 
     ; find a seller
-    let seller one-of turtles with [willingness-to-sell <= max-price]
+    let seller one-of turtles with [willingness-to-sell <= max-price and products > target-stock]
 
     ; if someone accepts the transaction, proceed
     if seller != nobody [
@@ -93,11 +93,11 @@ to go
   ; adapt the expectations of the turtles
   ask turtles [
 
-    ;; Next round turtles are only willing to buy another product at a price close to the original one.
-    ;; Next round turtles are only willing to sell another product at a price close to the equilibrium one if they have excess. If not, they sell it for a high price.
+    ;; Next round turtles are only willing to buy another product at a price close to the original one if they need some.
+    ;; Next round turtles are only willing to sell another product if they have excess
 
     if products <= target-stock [
-      set willingness-to-sell cost-to-produce + 10 + random 10
+      set willingness-to-sell equilibrium-price
       set willingness-to-pay min list money (equilibrium-price + random 20 - random 20)
     ]
 
@@ -247,7 +247,7 @@ average-cost-to-produce
 average-cost-to-produce
 0
 100
-20.0
+0.0
 1
 1
 NIL
