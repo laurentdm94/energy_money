@@ -1,120 +1,112 @@
-breed [buyers buyer]
-breed [sellers seller]
-
-buyers-own [
+turtles-own [
+  money
+  products
+  target-stock
   willingness-to-pay
-]
-
-sellers-own [
   cost-to-produce
 ]
 
 globals [
   equilibrium-price
+  transactions
 ]
 
 to setup
   clear-all
 
-  create-buyers 50 [
+  create-turtles 500 [
     set shape "person"
     setxy random-xcor random-ycor
-    set color blue
+    set color random 140 + 55
     set willingness-to-pay 100  + random 30 - random 30
-  ]
-
-  create-sellers 50 [
-    set shape "person"
-    setxy random-xcor random-ycor
-    set color green
     set cost-to-produce average-cost-to-produce
+
+    set money  (1 + random 3) * willingness-to-pay
+    set products random 10
   ]
 
-  set equilibrium-price [cost-to-produce] of min-one-of sellers [cost-to-produce]
+  ask turtles [
+    set target-stock round mean [products] of turtles
+  ]
 
-  visualize
+  compute-eq-price
+
   reset-ticks
 end
 
-to go
-  ask buyers [
+to compute-eq-price
+  ; reset equilibrium price and buyer seller quantities
+  set equilibrium-price 0
+  let quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
+  let quantity-sellers count turtles with [cost-to-produce <= equilibrium-price]
+
+  ; compute price for which offer equals demand
+  while [quantity-buyers - quantity-sellers > 0] [
+    set equilibrium-price equilibrium-price + 1
+    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
+    set quantity-sellers count turtles with [cost-to-produce <= equilibrium-price]
+  ]
+end
+
+to exchange-goods
+  ; reset number of transactions for this tick
+  set transactions 0
+
+  ; Ask potential buyers
+  ask turtles with [products < target-stock] [
     let max-price willingness-to-pay
-    let seller-offers sellers with [cost-to-produce <= max-price]
-    let best-offer min-one-of seller-offers [cost-to-produce]
 
-    if best-offer != nobody [
-      let best-offer-cost [cost-to-produce] of best-offer
+    ; find a seller
+    let seller one-of turtles with [cost-to-produce <= max-price and products > target-stock]
 
-      ifelse any? seller-offers [
-        set equilibrium-price best-offer-cost
-      ] [
-        set equilibrium-price max list equilibrium-price (min-one-of seller-offers [cost-to-produce])
+    ; if someone accepts the transaction, proceed
+    if seller != nobody [
+      let cost [cost-to-produce] of seller
+
+      ; update buyer state
+      set money money - cost
+      set products products + 1
+
+      ; update seller state
+      ask seller [
+        set products products - 1
+        set money money + cost
       ]
+
+      ; count the transactions per tick
+      set transactions transactions + 1
     ]
-
-    ; Now a seller only wants to buy at what he believes is equilibrium price
-    set willingness-to-pay equilibrium-price
   ]
+end
 
-  ask sellers [
-    let min-price cost-to-produce
-    let buyer-offers buyers with [willingness-to-pay >= min-price]
-    let best-offer max-one-of buyer-offers [willingness-to-pay]
+to go
 
-    if best-offer != nobody [
-      let best-offer-willingness [willingness-to-pay] of best-offer
+  ; resolve market price
+  compute-eq-price
 
-      ifelse any? buyer-offers [
-        set equilibrium-price best-offer-willingness
-      ] [
-        set equilibrium-price min list equilibrium-price (max-one-of buyer-offers [willingness-to-pay])
-      ]
-    ]
+  ; proceed with exchanges
+  exchange-goods
 
-  ]
+  ; adapt the expectations of the turtles
+  ask turtles [
+    ;; Next round turtles are only willing to buy another product at a price close to the original one.
+    set willingness-to-pay min list money (equilibrium-price + random 10 - random 10)
 
-  ask buyers [
-    ;; Next round sellers are only willing to buy another product at a price close to the original one.
-    set willingness-to-pay equilibrium-price + random 15 - random 15
-  ]
-
-  ask sellers [
-    ;; Reset cost to produce to something random but close to the original value.
-    set cost-to-produce max list 0 (average-cost-to-produce  + random 15 - random 15)
+    ;; Reset cost to produce to something random but close to the value set in slider.
+    set cost-to-produce max list 0 (average-cost-to-produce  + random 10 - random 10)
   ]
 
   ask turtles [
     move
   ]
 
-  visualize
-
   tick
-end
-
-to visualize
-  ;; to do
-  ; ask turtles [
-  ;   set label ""
-  ; ]
-  ; ask patches [
-  ;   set plabel ""
-  ; ]
-  ; let labelbuyer one-of buyers
-  ; let labelseller one-of sellers
-  ; ask labelbuyer [set label "Buyers"]
-  ; ask labelseller [set label "Sellers"]
-
-  ; ask labelbuyer [
-  ;  create-link-with labelseller [set label equilibrium-price]
-  ; ]
 end
 
 to move
   rt random 60 - 30
   fd 1
 end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 210
@@ -228,9 +220,9 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot mean [cost-to-produce] of sellers"
-"pen-1" 1.0 0 -2674135 true "" "plot max [cost-to-produce] of sellers"
-"pen-2" 1.0 0 -13345367 true "" "plot min [cost-to-produce] of sellers"
+"default" 1.0 0 -16777216 true "" "plot mean [cost-to-produce] of turtles"
+"pen-1" 1.0 0 -2674135 true "" "plot max [cost-to-produce] of turtles"
+"pen-2" 1.0 0 -13345367 true "" "plot min [cost-to-produce] of turtles"
 
 SLIDER
 14
@@ -241,7 +233,7 @@ average-cost-to-produce
 average-cost-to-produce
 0
 100
-32.0
+20.0
 1
 1
 NIL
@@ -263,9 +255,48 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot mean [willingness-to-pay] of buyers"
-"pen-1" 1.0 0 -13791810 true "" "plot min [willingness-to-pay] of buyers"
-"pen-2" 1.0 0 -2674135 true "" "plot max [willingness-to-pay] of buyers"
+"default" 1.0 0 -16777216 true "" "plot mean [willingness-to-pay] of turtles"
+"pen-1" 1.0 0 -13791810 true "" "plot min [willingness-to-pay] of turtles"
+"pen-2" 1.0 0 -2674135 true "" "plot max [willingness-to-pay] of turtles"
+
+PLOT
+684
+589
+1134
+709
+Turtles that have target stock
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"number of turtles" 1.0 0 -16777216 true "" "plot count turtles"
+"provided turtles " 1.0 0 -7500403 true "" "plot count turtles with [products = target-stock]"
+"needy turtles" 1.0 0 -2674135 true "" "plot count turtles with [products < target-stock]"
+"excess stock turtles" 1.0 0 -13840069 true "" "plot count turtles with [products > target-stock]"
+
+PLOT
+226
+468
+426
+618
+Transactions
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot transactions"
 
 @#$#@#$#@
 ## WHAT IS IT?
