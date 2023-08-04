@@ -1,9 +1,10 @@
 turtles-own [
-  money
-  products
-  target-stock
-  willingness-to-pay
-  cost-to-produce
+  money ; money held by turtle
+  products ; number of products held by turtle
+  target-stock ; target number of products to hold by turtle
+  cost-to-produce ; cost to produce a product
+  willingness-to-pay ; the amount a turtle is ready to pay
+  willingness-to-sell ; the amount for which a turtle will sell a product (in case it is under it's target, it will only do so at a high price)
 ]
 
 globals [
@@ -18,10 +19,12 @@ to setup
     set shape "person"
     setxy random-xcor random-ycor
     set color random 140 + 55
-    set willingness-to-pay 100  + random 30 - random 30
     set cost-to-produce average-cost-to-produce
+    set money 100  + random 30 - random 30
 
-    set money  (1 + random 3) * willingness-to-pay
+    set willingness-to-pay (random 10 / 10) * money
+    set willingness-to-sell 2 * cost-to-produce
+
     set products random 10
   ]
 
@@ -38,13 +41,13 @@ to compute-eq-price
   ; reset equilibrium price and buyer seller quantities
   set equilibrium-price 0
   let quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-  let quantity-sellers count turtles with [cost-to-produce <= equilibrium-price]
+  let quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price]
 
   ; compute price for which offer equals demand
   while [quantity-buyers - quantity-sellers > 0] [
     set equilibrium-price equilibrium-price + 1
     set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-    set quantity-sellers count turtles with [cost-to-produce <= equilibrium-price]
+    set quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price]
   ]
 end
 
@@ -57,20 +60,20 @@ to exchange-goods
     let max-price willingness-to-pay
 
     ; find a seller
-    let seller one-of turtles with [cost-to-produce <= max-price and products > target-stock]
+    let seller one-of turtles with [willingness-to-sell <= max-price]
 
     ; if someone accepts the transaction, proceed
     if seller != nobody [
-      let cost [cost-to-produce] of seller
+      let price [willingness-to-sell] of seller
 
       ; update buyer state
-      set money money - cost
+      set money money - price
       set products products + 1
 
       ; update seller state
       ask seller [
         set products products - 1
-        set money money + cost
+        set money money + price
       ]
 
       ; count the transactions per tick
@@ -89,8 +92,19 @@ to go
 
   ; adapt the expectations of the turtles
   ask turtles [
+
     ;; Next round turtles are only willing to buy another product at a price close to the original one.
-    set willingness-to-pay min list money (equilibrium-price + random 10 - random 10)
+    ;; Next round turtles are only willing to sell another product at a price close to the equilibrium one if they have excess. If not, they sell it for a high price.
+
+    if products <= target-stock [
+      set willingness-to-sell cost-to-produce + 10 + random 10
+      set willingness-to-pay min list money (equilibrium-price + random 20 - random 20)
+    ]
+
+    if products > target-stock [
+      set willingness-to-sell cost-to-produce + random 10
+      set willingness-to-pay 0
+    ]
 
     ;; Reset cost to produce to something random but close to the value set in slider.
     set cost-to-produce max list 0 (average-cost-to-produce  + random 10 - random 10)
@@ -252,12 +266,15 @@ NIL
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot mean [willingness-to-pay] of turtles"
-"pen-1" 1.0 0 -13791810 true "" "plot min [willingness-to-pay] of turtles"
-"pen-2" 1.0 0 -2674135 true "" "plot max [willingness-to-pay] of turtles"
+"mean [willingness-to-pay]" 1.0 0 -11221820 true "" "plot mean [willingness-to-pay] of turtles"
+"min [willingness-to-pay]" 1.0 0 -4528153 true "" "plot min [willingness-to-pay] of turtles"
+"max [willingness-to-pay]" 1.0 0 -13345367 true "" "plot max [willingness-to-pay] of turtles"
+"mean [willingness-to-sell]" 1.0 0 -1604481 true "" "plot mean [willingness-to-sell] of turtles"
+"max [willingness-to-sell]" 1.0 0 -5298144 true "" "plot max [willingness-to-sell] of turtles"
+"min [willingness-to-sell]" 1.0 0 -465430 true "" "plot min [willingness-to-sell] of turtles"
 
 PLOT
 684
