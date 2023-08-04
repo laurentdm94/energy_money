@@ -1,6 +1,6 @@
 breed [farmers farmer]
 breed [artisans artisan]
-breed [electricity-producers electricity-producer]
+breed [energy-producers energy-producer]
 
 globals [
   energy-price
@@ -79,7 +79,7 @@ to setup
     set tools 10
   ]
 
-  create-electricity-producers 50 [
+  create-energy-producers 50 [
     set shape "person"
     setxy random-xcor random-ycor
     set energy 100
@@ -119,8 +119,8 @@ to go
     perform-artistry
   ]
 
-  ask electricity-producers [
-    generate-electricity
+  ask energy-producers [
+    generate-energy
   ]
 
   set-prices
@@ -148,7 +148,7 @@ to update-needs
 end
 
 to set-prices
-  set energy-price (sum [need-energy] of turtles / ( sum [productstock] of electricity-producers + 0.0001))
+  set energy-price (sum [need-energy] of turtles / ( sum [productstock] of energy-producers + 0.0001))
   set tools-price (sum [need-tools] of turtles / (sum [productstock] of artisans + 0.0001))
   set food-price (sum [need-food] of turtles / (sum [productstock] of farmers + 0.0001))
 
@@ -160,7 +160,7 @@ to set-prices
    set price tools-price * (energy-to-produce * energy-price + tools-to-produce * tools-price)
   ]
 
-  ask electricity-producers [
+  ask energy-producers [
    set price energy-price * (energy-to-produce * energy-price + tools-to-produce * tools-price)
   ]
 end
@@ -168,7 +168,7 @@ end
 to buy-and-sell
   let target-farmer one-of other farmers
   let target-artisan one-of other artisans
-  let target-producer one-of other electricity-producers
+  let target-producer one-of other energy-producers
 
   if target-farmer != nobody and need-food >= 1 [
     let other-turtle-price [price] of target-farmer
@@ -258,7 +258,7 @@ to perform-artistry
   ]
 end
 
-to generate-electricity
+to generate-energy
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set energy energy - energy-to-produce  ; Energy extracting activities consume energy
     set tools tools - tools-to-produce ; Wear of the tools
