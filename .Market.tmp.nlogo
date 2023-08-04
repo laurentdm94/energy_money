@@ -20,14 +20,14 @@ to setup
     set shape "person"
     setxy random-xcor random-ycor
     set color blue
-    set willingness-to-pay random 100
+    set willingness-to-pay 100  + random 30 - random 30
   ]
 
   create-sellers 50 [
     set shape "person"
     setxy random-xcor random-ycor
     set color green
-    set cost-to-produce random 80
+    set cost-to-produce 80  + random 30 - random 30
   ]
 
   set equilibrium-price [cost-to-produce] of min-one-of sellers [cost-to-produce]
@@ -53,8 +53,8 @@ to go
     ]
 
     move
-    ;; reset cost to produce to something random but close to the original value.
-    set willingness-to-pay equilibrium-price + random 20 - random 20
+    ;; Now sellers are only willing to buy another product at a price close to the original one.
+    set willingness-to-pay equilibrium-price + random 15 - random 15
   ]
 
   ask sellers [
@@ -74,7 +74,7 @@ to go
 
     move
     ;; reset cost to produce to something random but close to the original value.
-    set cost-to-produce cost-to-produce + random 15 - random 15
+    set cost-to-produce 80  + random 30 - random 30
   ]
 
   visualize
@@ -186,10 +186,10 @@ NIL
 1
 
 PLOT
-738
-91
-1191
-382
+679
+17
+1132
+308
 equilibrium price
 NIL
 NIL
@@ -202,6 +202,26 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot equilibrium-price"
+
+PLOT
+686
+331
+886
+481
+Min max mean cos to produce
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot mean [cost-to-produce] of sellers"
+"pen-1" 1.0 0 -2674135 true "" "plot max [cost-to-produce] of sellers"
+"pen-2" 1.0 0 -13345367 true "" "plot min [cost-to-produce] of sellers"
 
 @#$#@#$#@
 ## WHAT IS IT?
