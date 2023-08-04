@@ -36,7 +36,6 @@ to setup
   create-farmers 100 [
     set shape "person"
     setxy random-xcor random-ycor
-    set energy 100
     set color green
 
     set energy-to-produce 0.1 + (random 10 / 10)
@@ -59,7 +58,6 @@ to setup
   create-artisans 100 [
     set shape "person"
     setxy random-xcor random-ycor
-    set energy 100
     set color blue
 
     set energy-to-produce 1 + (random 10 / 10)
