@@ -4,7 +4,7 @@ turtles-own [
   target-stock ; target number of products to hold by turtle
   cost-to-produce ; cost to produce a product
   willingness-to-pay ; the amount a turtle is ready to pay
-  willingness-to-sell ; the amount for which a turtle will sell a product (in case it is under it's target, it will only do so at a high price)
+  willingness-to-accept ; the amount for which a turtle will sell a product (in case it is under it's target, it will only do so at a high price)
 ]
 
 globals [
@@ -23,7 +23,7 @@ to setup
     set money 100  + random 30 - random 30
 
     set willingness-to-pay (random 10 / 10) * money
-    set willingness-to-sell 2 * cost-to-produce
+    set willingness-to-accept 2 * cost-to-produce
 
     set products random 10
   ]
@@ -41,13 +41,13 @@ to compute-eq-price
   ; reset equilibrium price and buyer seller quantities
   set equilibrium-price 0
   let quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-  let quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price]
+  let quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price]
 
   ; compute price for which offer equals demand
   while [quantity-buyers - quantity-sellers > 0] [
     set equilibrium-price equilibrium-price + 1
     set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price and products < target-stock]
-    set quantity-sellers count turtles with [willingness-to-sell <= equilibrium-price and products > target-stock]
+    set quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price and products > target-stock]
   ]
 end
 
@@ -60,11 +60,11 @@ to exchange-goods
     let max-price willingness-to-pay
 
     ; find a seller
-    let seller one-of turtles with [willingness-to-sell <= max-price and products > target-stock]
+    let seller one-of turtles with [willingness-to-accept <= max-price and products > target-stock]
 
     ; if someone accepts the transaction, proceed
     if seller != nobody [
-      let price [willingness-to-sell] of seller
+      let price [willingness-to-accept] of seller
 
       ; update buyer state
       set money money - price
@@ -97,12 +97,12 @@ to go
     ;; Next round turtles are only willing to sell another product if they have excess
 
     if products <= target-stock [
-      set willingness-to-sell equilibrium-price
+      set willingness-to-accept equilibrium-price
       set willingness-to-pay min list money (equilibrium-price + random 20 - random 20)
     ]
 
     if products > target-stock [
-      set willingness-to-sell cost-to-produce + random 10
+      set willingness-to-accept cost-to-produce + random 10
       set willingness-to-pay 0
     ]
 
