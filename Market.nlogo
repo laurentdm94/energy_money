@@ -80,7 +80,7 @@ to go
 
   ask sellers [
     ;; Reset cost to produce to something random but close to the original value.
-    set cost-to-produce average-cost-to-produce  + random 15 - random 15
+    set cost-to-produce max list 0 (average-cost-to-produce  + random 15 - random 15)
   ]
 
   ask turtles [
@@ -214,10 +214,10 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot equilibrium-price"
 
 PLOT
-686
-331
-886
-481
+683
+459
+1133
+579
 Min max mean cos to produce
 NIL
 NIL
@@ -242,11 +242,31 @@ average-cost-to-produce
 average-cost-to-produce
 0
 100
-16.0
+0.0
 1
 1
 NIL
 HORIZONTAL
+
+PLOT
+681
+318
+1134
+445
+min max mean willingness to pau
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot mean [willingness-to-pay] of buyers"
+"pen-1" 1.0 0 -13791810 true "" "plot min [willingness-to-pay] of buyers"
+"pen-2" 1.0 0 -2674135 true "" "plot max [willingness-to-pay] of buyers"
 
 @#$#@#$#@
 ## WHAT IS IT?
