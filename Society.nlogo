@@ -166,12 +166,11 @@ to set-prices
 end
 
 to buy-and-sell
-  let target-farmer one-of other farmers-on patch-here
-  let target-artisan one-of other artisans-on patch-here
-  let target-producer one-of other electricity-producers-on patch-here
+  let target-farmer one-of other farmers
+  let target-artisan one-of other artisans
+  let target-producer one-of other electricity-producers
 
-  if target-farmer != nobody and need-food = true [
-    print "A farmer is on the same patch."
+  if target-farmer != nobody and need-food >= 1 [
     let other-turtle-price [price] of target-farmer
     let other-turtle-productstock [productstock] of target-farmer
     let max-goods min (list other-turtle-productstock (money / other-turtle-price))
@@ -190,7 +189,7 @@ to buy-and-sell
       set food food + max-goods ; Increase food by the amount bought
     ]
   ]
-  if target-artisan != nobody and need-tools = true [
+  if target-artisan != nobody and need-tools >= 1 [
     let other-turtle-price [price] of target-artisan
     let other-turtle-productstock [productstock] of target-artisan
     let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
@@ -209,7 +208,7 @@ to buy-and-sell
       set tools tools + max-goods ; Increase food by the amount bought
     ]
   ]
-  if target-producer != nobody and need-energy = true [
+  if target-producer != nobody and need-energy >= 1 [
     let other-turtle-price [price] of target-producer
     let other-turtle-productstock [productstock] of target-producer
     let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
@@ -254,7 +253,8 @@ to perform-artistry
     let tools-produced 1 + (random 10 / 10)  ; Randomly produce around 1 units of tools
     set productstock productstock + tools-produced; Add the produced tool in the stockpile
   ] [
-    ; If the artisan has no energy left, stop producing tools
+    set productstock productstock + 0.25 ; Add the produced food to the farmer's food stockpile
+    set food food + 1 ; The farmer keeps food for himself
   ]
 end
 
