@@ -3,6 +3,7 @@ turtles-own [
   products ; number of products held by turtle
   target-stock ; target number of products to hold by turtle
   cost-to-produce ; cost to produce a product
+  buy-marginal-utility ; margin utility of buying one more product
   willingness-to-pay ; the amount a turtle is ready to pay
   willingness-to-accept ; the amount for which a turtle will sell a product (in case it is under it's target, it will only do so at a high price)
 ]
@@ -23,7 +24,7 @@ to setup
     set money 100  + random 30 - random 30
 
     set willingness-to-pay (random 10 / 10) * money
-    set willingness-to-accept 2 * cost-to-produce
+    set willingness-to-accept cost-to-produce + 10
 
     set products random 10
   ]
@@ -46,8 +47,8 @@ to compute-eq-price
   ; compute price for which offer equals demand
   while [quantity-buyers - quantity-sellers > 0] [
     set equilibrium-price equilibrium-price + 1
-    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price and products < target-stock]
-    set quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price and products > target-stock]
+    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
+    set quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price]
   ]
 end
 
@@ -97,11 +98,13 @@ to go
     ;; Next round turtles are only willing to sell another product if they have excess
 
     if products <= target-stock [
-      set willingness-to-accept equilibrium-price
-      set willingness-to-pay min list money (equilibrium-price + random 20 - random 20)
+      set buy-marginal-utility (target-stock - products) / 10
+      set willingness-to-accept cost-to-produce + random 10
+      set willingness-to-pay min list money (equilibrium-price + 5 + buy-marginal-utility * 10)
     ]
 
     if products > target-stock [
+      set buy-marginal-utility 0
       set willingness-to-accept cost-to-produce + random 10
       set willingness-to-pay 0
     ]
@@ -247,7 +250,7 @@ average-cost-to-produce
 average-cost-to-produce
 0
 100
-0.0
+50.0
 1
 1
 NIL
@@ -272,9 +275,9 @@ PENS
 "mean [willingness-to-pay]" 1.0 0 -11221820 true "" "plot mean [willingness-to-pay] of turtles"
 "min [willingness-to-pay]" 1.0 0 -4528153 true "" "plot min [willingness-to-pay] of turtles"
 "max [willingness-to-pay]" 1.0 0 -13345367 true "" "plot max [willingness-to-pay] of turtles"
-"mean [willingness-to-sell]" 1.0 0 -1604481 true "" "plot mean [willingness-to-sell] of turtles"
-"max [willingness-to-sell]" 1.0 0 -5298144 true "" "plot max [willingness-to-sell] of turtles"
-"min [willingness-to-sell]" 1.0 0 -465430 true "" "plot min [willingness-to-sell] of turtles"
+"mean [willingness-to-sell]" 1.0 0 -1604481 true "" "plot mean [willingness-to-accept] of turtles"
+"max [willingness-to-sell]" 1.0 0 -5298144 true "" "plot max [willingness-to-accept] of turtles"
+"min [willingness-to-sell]" 1.0 0 -465430 true "" "plot min [willingness-to-accept] of turtles"
 
 PLOT
 684
