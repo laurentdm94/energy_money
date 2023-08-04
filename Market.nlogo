@@ -27,7 +27,7 @@ to setup
     set shape "person"
     setxy random-xcor random-ycor
     set color green
-    set cost-to-produce 80  + random 30 - random 30
+    set cost-to-produce average-cost-to-produce
   ]
 
   set equilibrium-price [cost-to-produce] of min-one-of sellers [cost-to-produce]
@@ -40,7 +40,7 @@ to go
   ask buyers [
     let max-price willingness-to-pay
     let seller-offers sellers with [cost-to-produce <= max-price]
-    let best-offer max-one-of seller-offers [cost-to-produce]
+    let best-offer min-one-of seller-offers [cost-to-produce]
 
     if best-offer != nobody [
       let best-offer-cost [cost-to-produce] of best-offer
@@ -52,9 +52,8 @@ to go
       ]
     ]
 
-    move
-    ;; Now sellers are only willing to buy another product at a price close to the original one.
-    set willingness-to-pay equilibrium-price + random 15 - random 15
+    ; Now a seller only wants to buy at what he believes is equilibrium price
+    set willingness-to-pay equilibrium-price
   ]
 
   ask sellers [
@@ -72,9 +71,20 @@ to go
       ]
     ]
 
+  ]
+
+  ask buyers [
+    ;; Next round sellers are only willing to buy another product at a price close to the original one.
+    set willingness-to-pay equilibrium-price + random 15 - random 15
+  ]
+
+  ask sellers [
+    ;; Reset cost to produce to something random but close to the original value.
+    set cost-to-produce average-cost-to-produce  + random 15 - random 15
+  ]
+
+  ask turtles [
     move
-    ;; reset cost to produce to something random but close to the original value.
-    set cost-to-produce 80  + random 30 - random 30
   ]
 
   visualize
@@ -135,10 +145,10 @@ ticks
 30.0
 
 BUTTON
-27
-21
-109
-54
+11
+18
+93
+51
 NIL
 setup
 NIL
@@ -222,6 +232,21 @@ PENS
 "default" 1.0 0 -16777216 true "" "plot mean [cost-to-produce] of sellers"
 "pen-1" 1.0 0 -2674135 true "" "plot max [cost-to-produce] of sellers"
 "pen-2" 1.0 0 -13345367 true "" "plot min [cost-to-produce] of sellers"
+
+SLIDER
+14
+124
+203
+157
+average-cost-to-produce
+average-cost-to-produce
+0
+100
+16.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
