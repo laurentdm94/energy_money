@@ -94,12 +94,12 @@ end
 
 to visualize
   ;; to do
-  ask turtles [
-    set label ""
-  ]
-  ask patches [
-    set plabel ""
-  ]
+  ; ask turtles [
+  ;   set label ""
+  ; ]
+  ; ask patches [
+  ;   set plabel ""
+  ; ]
   ; let labelbuyer one-of buyers
   ; let labelseller one-of sellers
   ; ask labelbuyer [set label "Buyers"]
@@ -114,7 +114,6 @@ to move
   rt random 60 - 30
   fd 1
 end
-
 
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -218,7 +217,7 @@ PLOT
 459
 1133
 579
-Min max mean cos to produce
+Min max mean cost to produce
 NIL
 NIL
 0.0
@@ -242,7 +241,7 @@ average-cost-to-produce
 average-cost-to-produce
 0
 100
-0.0
+32.0
 1
 1
 NIL
@@ -253,7 +252,7 @@ PLOT
 318
 1134
 445
-min max mean willingness to pau
+min max mean willingness to pay
 NIL
 NIL
 0.0
