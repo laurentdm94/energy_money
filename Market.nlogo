@@ -33,23 +33,25 @@ to setup
     set target-stock round mean [products] of turtles
   ]
 
-  compute-eq-price
+  set equilibrium-price compute-eq-price equilibrium-price
 
   reset-ticks
 end
 
-to compute-eq-price
+to-report compute-eq-price [price]
   ; reset equilibrium price and buyer seller quantities
-  set equilibrium-price 0
-  let quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-  let quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price]
+  set price 0
+  let quantity-buyers count turtles with [willingness-to-pay >= price]
+  let quantity-sellers count turtles with [willingness-to-accept <= price]
 
   ; compute price for which offer equals demand
   while [quantity-buyers - quantity-sellers > 0] [
-    set equilibrium-price equilibrium-price + 1
-    set quantity-buyers count turtles with [willingness-to-pay >= equilibrium-price]
-    set quantity-sellers count turtles with [willingness-to-accept <= equilibrium-price]
+    set price price + 1
+    set quantity-buyers count turtles with [willingness-to-pay >= price]
+    set quantity-sellers count turtles with [willingness-to-accept <= price]
   ]
+
+  report price
 end
 
 to exchange-goods
@@ -86,7 +88,7 @@ end
 to go
 
   ; resolve market price
-  compute-eq-price
+  set equilibrium-price compute-eq-price equilibrium-price
 
   ; proceed with exchanges
   exchange-goods
