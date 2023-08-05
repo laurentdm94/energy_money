@@ -17,9 +17,9 @@ turtles-own [
   productstock  ; Stock to sell
 
   ; Needs.
-  need-energy ; If the agent needs to buy energy.
-  need-food ; If the agent needs to buy food.
-  need-tools ; If the agent needs to buy products.
+  energy-utility ; If the agent needs to buy energy.
+  food-utility ; If the agent needs to buy food.
+  tool-utility ; If the agent needs to buy products.
 
   ; The agent's possessions
   money  ; Stock of money
@@ -39,13 +39,14 @@ to setup
 
     set energy-to-produce 0.1 + (random 10 / 10)
     set tools-to-produce 0.1 + (random 10 / 10)
-    set margin food-price + random 5
+
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
+
+    set margin food-price + min list 0 food-utility * random 5
     set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
-    set need-energy 0
-    set need-food 0
-    set need-tools 0
 
     set money 25
     set food 25
@@ -60,13 +61,14 @@ to setup
 
     set energy-to-produce 1 + (random 10 / 10)
     set tools-to-produce 0.1 + (random 10 / 10)
-    set margin food-price + random 5
+
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
+
+    set margin food-price + min list 0 tool-utility * random 5
     set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
-    set need-energy 0
-    set need-food 0
-    set need-tools 0
 
     set money 25
     set food 25
@@ -82,13 +84,14 @@ to setup
 
     set energy-to-produce 0.1 + (random 10 / 100)
     set tools-to-produce 0.1 + (random 10 / 10)
-    set margin food-price + random 5
+
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
+
+    set margin food-price + min list 0 energy-utility * random 5
     set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
-    set need-energy 0
-    set need-food 0
-    set need-tools 0
 
     set money 25
     set food 25
@@ -129,22 +132,22 @@ end
 
 to update-needs
   if energy <= energy-to-produce [
-    set need-energy energy-to-produce
+    set energy-utility energy-to-produce
   ]
 
   if tools <= tools-to-produce [
-    set need-tools tools-to-produce
+    set tool-utility tools-to-produce
   ]
 
   if food < 10 [
-    set need-food 1
+    set food-utility 1
   ]
 end
 
 to set-prices
-  set energy-price (sum [need-energy] of turtles / ( sum [productstock] of energy-producers + 0.0001))
-  set tools-price (sum [need-tools] of turtles / (sum [productstock] of artisans + 0.0001))
-  set food-price (sum [need-food] of turtles / (sum [productstock] of farmers + 0.0001))
+  set energy-price (sum [energy-utility] of turtles / ( sum [productstock] of energy-producers + 0.0001))
+  set tools-price (sum [tool-utility] of turtles / (sum [productstock] of artisans + 0.0001))
+  set food-price (sum [food-utility] of turtles / (sum [productstock] of farmers + 0.0001))
 
   ask farmers [
     set margin food-price + random 5
@@ -167,7 +170,7 @@ to buy-and-sell
   let target-artisan one-of other artisans
   let target-producer one-of other energy-producers
 
-  if target-farmer != nobody and need-food >= 1 [
+  if target-farmer != nobody and food-utility >= 1 [
     let other-turtle-price [willingness-to-accept] of target-farmer
     let other-turtle-productstock [productstock] of target-farmer
     let max-goods min (list other-turtle-productstock (money / other-turtle-price))
@@ -186,7 +189,7 @@ to buy-and-sell
       set food food + max-goods ; Increase food by the amount bought
     ]
   ]
-  if target-artisan != nobody and need-tools >= 1 [
+  if target-artisan != nobody and tool-utility >= 1 [
     let other-turtle-price [willingness-to-accept] of target-artisan
     let other-turtle-productstock [productstock] of target-artisan
     let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
@@ -205,7 +208,7 @@ to buy-and-sell
       set tools tools + max-goods ; Increase food by the amount bought
     ]
   ]
-  if target-producer != nobody and need-energy >= 1 [
+  if target-producer != nobody and energy-utility >= 1 [
     let other-turtle-price [willingness-to-accept] of target-producer
     let other-turtle-productstock [productstock] of target-producer
     let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
