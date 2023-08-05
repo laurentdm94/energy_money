@@ -6,6 +6,10 @@ globals [
   energy-price
   tools-price
   food-price
+
+  energy-transactions
+  tools-transactions
+  food-transactions
 ]
 
 turtles-own [
@@ -16,10 +20,15 @@ turtles-own [
   willingness-to-accept ; Price at which it will accept to sell the good
   productstock  ; Stock to sell
 
-  ; Needs.
+  ; Utilities.
   energy-utility ; If the agent needs to buy energy.
   food-utility ; If the agent needs to buy food.
   tool-utility ; If the agent needs to buy products.
+
+  ; Willingness to pay.
+  willingness-to-pay-energy ; If the agent needs to buy energy.
+  willingness-to-pay-food ; If the agent needs to buy food.
+  willingness-to-pay-tools ; If the agent needs to buy products.
 
   ; The agent's possessions
   money  ; Stock of money
@@ -32,6 +41,10 @@ to setup
   clear-all
   reset-ticks
 
+  set energy-price 1
+  set tools-price 1
+  set food-price 1
+
   create-farmers 100 [
     set shape "person"
     setxy random-xcor random-ycor
@@ -40,14 +53,7 @@ to setup
     set energy-to-produce 0.1 + (random 10 / 10)
     set tools-to-produce 0.1 + (random 10 / 10)
 
-    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
-    set food-utility (10 - food) / 10
-    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
-
-    set margin food-price + min list 0 food-utility * random 5
-    set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
     set money 25
     set food 25
     set energy 25
@@ -62,14 +68,7 @@ to setup
     set energy-to-produce 1 + (random 10 / 10)
     set tools-to-produce 0.1 + (random 10 / 10)
 
-    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
-    set food-utility (10 - food) / 10
-    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
-
-    set margin food-price + min list 0 tool-utility * random 5
-    set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
     set money 25
     set food 25
     set energy 25
@@ -85,21 +84,57 @@ to setup
     set energy-to-produce 0.1 + (random 10 / 100)
     set tools-to-produce 0.1 + (random 10 / 10)
 
-    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
-    set food-utility (10 - food) / 10
-    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
-
-    set margin food-price + min list 0 energy-utility * random 5
-    set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
     set productstock 5
-
     set money 25
     set food 25
     set energy 25
     set tools 10
   ]
 
+  update-needs
   reset-ticks
+end
+
+to compute-energy-eq-price
+  ; reset equilibrium price and buyer seller quantities
+  set energy-price 0
+  let quantity-buyers count turtles with [willingness-to-pay-energy >= energy-price]
+  let quantity-sellers count energy-producers with [willingness-to-accept <= energy-price]
+
+  ; compute price for which offer equals demand
+  while [quantity-buyers - quantity-sellers > 0] [
+    set energy-price energy-price + 1
+    set quantity-buyers count turtles with [willingness-to-pay-energy >= energy-price]
+    set quantity-sellers count energy-producers with [willingness-to-accept <= energy-price]
+  ]
+end
+
+to compute-food-eq-price
+  ; reset equilibrium price and buyer seller quantities
+  set food-price 0
+  let quantity-buyers count turtles with [willingness-to-pay-food >= food-price]
+  let quantity-sellers count farmers with [willingness-to-accept <= food-price]
+
+  ; compute price for which offer equals demand
+  while [quantity-buyers - quantity-sellers > 0] [
+    set food-price food-price + 1
+    set quantity-buyers count turtles with [willingness-to-pay-food >= food-price]
+    set quantity-sellers count farmers with [willingness-to-accept <= food-price]
+  ]
+end
+
+to compute-tools-eq-price
+  ; reset equilibrium price and buyer seller quantities
+  set tools-price 0
+  let quantity-buyers count turtles with [willingness-to-pay-tools >= tools-price]
+  let quantity-sellers count artisans with [willingness-to-accept <= tools-price]
+
+  ; compute price for which offer equals demand
+  while [quantity-buyers - quantity-sellers > 0] [
+    set tools-price tools-price + 1
+    set quantity-buyers count turtles with [willingness-to-pay-tools >= tools-price]
+    set quantity-sellers count artisans with [willingness-to-accept <= tools-price]
+  ]
 end
 
 to go
@@ -123,7 +158,7 @@ to go
   set-prices
 
   ask turtles [
-    buy-and-sell
+    exchange-goods
     eat
   ]
 
@@ -131,100 +166,139 @@ to go
 end
 
 to update-needs
-  if energy <= energy-to-produce [
-    set energy-utility energy-to-produce
-  ]
 
-  if tools <= tools-to-produce [
-    set tool-utility tools-to-produce
-  ]
+  ask energy-producers [
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
 
-  if food < 10 [
-    set food-utility 1
-  ]
-end
+    set margin food-price + min list 0 energy-utility * random 5
+    set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
 
-to set-prices
-  set energy-price (sum [energy-utility] of turtles / ( sum [productstock] of energy-producers + 0.0001))
-  set tools-price (sum [tool-utility] of turtles / (sum [productstock] of artisans + 0.0001))
-  set food-price (sum [food-utility] of turtles / (sum [productstock] of farmers + 0.0001))
+    set willingness-to-pay-energy min list money energy-price + energy-utility * 10
+    set willingness-to-pay-food min list money food-price + food-utility * 10
+    set willingness-to-pay-tools min list money tools-price + tool-utility * 10
+  ]
 
   ask farmers [
-    set margin food-price + random 5
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
+
+    set margin food-price + min list 0 food-utility * random 5
     set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
+
+    set willingness-to-pay-energy min list money energy-price + energy-utility * 10
+    set willingness-to-pay-food min list money food-price + food-utility * 10
+    set willingness-to-pay-tools min list money tools-price + tool-utility * 10
   ]
 
   ask artisans [
-    set margin food-price + random 5
+    set energy-utility (3 * energy-to-produce - energy) / (3 * energy-to-produce)
+    set food-utility (10 - food) / 10
+    set tool-utility (3 * tools-to-produce - tools) / (3 * tools-to-produce)
+
+    set margin food-price + min list 0 tool-utility * random 5
     set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
+
+    set willingness-to-pay-energy min list money energy-price + energy-utility * 10
+    set willingness-to-pay-food min list money food-price + food-utility * 10
+    set willingness-to-pay-tools min list money tools-price + tool-utility * 10
   ]
 
-  ask energy-producers [
-    set margin food-price + random 5
-    set willingness-to-accept energy-to-produce * energy-price + tools-to-produce * tools-price + margin
-  ]
 end
 
-to buy-and-sell
-  let target-farmer one-of other farmers
-  let target-artisan one-of other artisans
-  let target-producer one-of other energy-producers
+to set-prices
+  compute-energy-eq-price
+  compute-food-eq-price
+  compute-tools-eq-price
+end
 
-  if target-farmer != nobody and food-utility >= 1 [
-    let other-turtle-price [willingness-to-accept] of target-farmer
-    let other-turtle-productstock [productstock] of target-farmer
-    let max-goods min (list other-turtle-productstock (money / other-turtle-price))
+to exchange-goods
+  ; reset number of transactions for this tick
+  set energy-transactions 0
+  set food-transactions 0
+  set tools-transactions 0
 
-    if max-goods > 0 [
-      ; compute price paid
-      let price-paid (other-turtle-price * max-goods)
+  ; energy
+  ; Ask potential buyers
+  ask turtles with [energy-utility > 0] [
+    let max-price willingness-to-pay-energy
 
-      ;do the transfers of food and money
-      ask target-farmer [
-        set productstock productstock - max-goods ; Decrease farmer productstock by the amount sold
-        set money money + price-paid ; Increase farmer funds by the amount sold
+    ; find a seller
+    let seller one-of energy-producers with [willingness-to-accept <= max-price]
+
+    ; if someone accepts the transaction, proceed
+    if seller != nobody [
+      let price [willingness-to-accept] of seller
+
+      ; update buyer state
+      set money money - price
+      set energy energy + 1
+
+      ; update seller state
+      ask seller [
+        set productstock productstock - 1
+        set money money + price
       ]
 
-      set money money - price-paid; Adjust money based on the amount bought
-      set food food + max-goods ; Increase food by the amount bought
+      ; count the food-transactions per tick
+      set energy-transactions energy-transactions + 1
     ]
   ]
-  if target-artisan != nobody and tool-utility >= 1 [
-    let other-turtle-price [willingness-to-accept] of target-artisan
-    let other-turtle-productstock [productstock] of target-artisan
-    let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
 
-    if max-goods > 0 [
-      ; compute price paid
-      let price-paid (other-turtle-price * max-goods)
 
-      ;do the transfers of products and money
-      ask target-artisan [
-        set productstock productstock - max-goods ; Decrease farmer productstock by the amount sold
-        set money money + price-paid ; Increase farmer funds by the amount sold
+  ; food
+  ; Ask potential buyers
+  ask turtles with [food-utility > 0] [
+    let max-price willingness-to-pay-food
+
+    ; find a seller
+    let seller one-of farmers with [willingness-to-accept <= max-price]
+
+    ; if someone accepts the transaction, proceed
+    if seller != nobody [
+      let price [willingness-to-accept] of seller
+
+      ; update buyer state
+      set money money - price
+      set food food + 1
+
+      ; update seller state
+      ask seller [
+        set productstock productstock - 1
+        set money money + price
       ]
 
-      set money money - price-paid; Adjust money based on the amount bought
-      set tools tools + max-goods ; Increase food by the amount bought
+      ; count the food-transactions per tick
+      set food-transactions food-transactions + 1
     ]
   ]
-  if target-producer != nobody and energy-utility >= 1 [
-    let other-turtle-price [willingness-to-accept] of target-producer
-    let other-turtle-productstock [productstock] of target-producer
-    let max-goods min (list other-turtle-productstock (money / other-turtle-price) 2)
 
-    if max-goods > 0 [
-      ; compute price paid
-      let price-paid (other-turtle-price * max-goods)
+  ; tools
+  ; Ask potential buyers
+  ask turtles with [tool-utility > 0] [
+    let max-price willingness-to-pay-tools
 
-      ;do the transfers of energy and money
-      ask target-producer [
-        set productstock productstock - max-goods ; Decrease farmer productstock by the amount sold
-        set money money + price-paid ; Increase farmer funds by the amount sold
+    ; find a seller
+    let seller one-of artisans with [willingness-to-accept <= max-price]
+
+    ; if someone accepts the transaction, proceed
+    if seller != nobody [
+      let price [willingness-to-accept] of seller
+
+      ; update buyer state
+      set money money - price
+      set tools tools + 1
+
+      ; update seller state
+      ask seller [
+        set productstock productstock - 1
+        set money money + price
       ]
 
-      set money money - price-paid; Adjust money based on the amount bought
-      set energy energy + max-goods ; Increase food by the amount bought
+      ; count the food-transactions per tick
+      set tools-transactions tools-transactions + 1
     ]
   ]
 end
@@ -242,7 +316,8 @@ to perform-farming
     set productstock productstock + food-produced - 1 ; Add the produced food to the farmer's food stockpile
     set food food + 1 ; The farmer keeps food for himself
   ] [
-    ; If the farmer has no energy left, stop farming
+    set productstock productstock + 0.25 ; Add the produced food to the farmer's food stockpile
+    set food food + 1 ; The farmer keeps food for himself
   ]
 end
 
@@ -253,8 +328,7 @@ to perform-artistry
     let tools-produced 1 + (random 10 / 10)  ; Randomly produce around 1 units of tools
     set productstock productstock + tools-produced; Add the produced tool in the stockpile
   ] [
-    set productstock productstock + 0.25 ; Add the produced food to the farmer's food stockpile
-    set food food + 1 ; The farmer keeps food for himself
+    ; If the artisan has no energy or tools left, stop producing tools
   ]
 end
 
@@ -265,7 +339,7 @@ to generate-energy
     let energy-produced 1 + (random 10 / 10)  ; Randomly produce between 1 and 3 units of energy
     set productstock productstock + energy-produced; Add the produced energy in the stockpile
   ] [
-    ; If the producer has no energy left, stop extracting energy
+    ; If the producer has no energy left or tools left, stop extracting energy
   ]
 end
 
