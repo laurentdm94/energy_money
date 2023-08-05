@@ -60,8 +60,8 @@ to setup
     set tools-to-produce 1
 
     set productstock 5
-    set money 25
-    set food random 10
+    set money 250
+    set food 1 + random 10
     set energy random 10
     set tools random 10
   ]
@@ -74,8 +74,8 @@ to setup
     set energy-to-produce 1
     set tools-to-produce 0
     set productstock 5
-    set money 25
-    set food random 10
+    set money 250
+    set food 1 + random 10
     set energy random 10
     set tools random 10
   ]
@@ -89,8 +89,8 @@ to setup
     set tools-to-produce 1
 
     set productstock 5
-    set money 25
-    set food random 10
+    set money 250
+    set food 1 + random 10
     set energy random 10
     set tools random 10
   ]
@@ -176,17 +176,22 @@ to go
     generate-energy
   ]
 
-  exchange-goods
+  distribute-money
+  update-costs-to-produce
+  update-willingness-to-accept
+
+  let i 0
+  while [i < 5] [
+    update-needs
+    update-willingness-to-pay
+    exchange-goods
+    set i i + 1
+  ]
 
   ask turtles [
     eat
   ]
 
-  distribute-money
-  update-needs
-  update-costs-to-produce
-  update-willingness-to-pay
-  update-willingness-to-accept
   set-prices
 
   tick
@@ -215,7 +220,7 @@ end
 
 to update-costs-to-produce
   ask turtles [
-    set cost-to-produce 1 ; to be developed
+    set cost-to-produce global-cost ; to be developed
   ]
   if count energy-producers != 0 [
     set cost-to-produce-energy mean [cost-to-produce] of energy-producers
@@ -230,9 +235,9 @@ end
 
 to update-willingness-to-pay
   ask turtles [
-    set willingness-to-pay-energy min list money last energy-price * (1 + energy-utility) + random 10 - random 10
-    set willingness-to-pay-food min list money last food-price * (1 + food-utility) + random 10 - random 10
-    set willingness-to-pay-tools min list money last tools-price * (1 + tool-utility) + random 10 - random 10
+    set willingness-to-pay-energy min list (money / 5) (cost-to-produce-energy + random 5 - random 5)
+    set willingness-to-pay-food min list (money / 5) (cost-to-produce-food + random 5 - random 5)
+    set willingness-to-pay-tools min list (money / 5) (cost-to-produce-tools + random 5 - random 5)
   ]
 end
 
@@ -263,7 +268,7 @@ to exchange-goods
   ; energy
   ; Ask potential buyers
   ask turtles with [energy-utility > 0 and energy-utility >= tool-utility and energy-utility >= food-utility] [
-    let max-price min list money willingness-to-pay-energy
+    let max-price min list (money / 5) willingness-to-pay-energy
 
     ; find a seller
     let seller one-of energy-producers with [willingness-to-accept <= max-price and productstock > 0]
@@ -291,7 +296,7 @@ to exchange-goods
   ; food
   ; Ask potential buyers
   ask turtles with [food-utility > 0 and food-utility >= tool-utility and food-utility >= energy-utility] [
-    let max-price min list money willingness-to-pay-food
+    let max-price min list (money / 5) willingness-to-pay-food
 
     ; find a seller
     let seller one-of farmers with [willingness-to-accept <= max-price and productstock > 0]
@@ -318,7 +323,7 @@ to exchange-goods
   ; tools
   ; Ask potential buyers
   ask turtles with [tool-utility > 0 and tool-utility >= energy-utility and tool-utility >= food-utility] [
-    let max-price min list money willingness-to-pay-tools
+    let max-price min list (money / 5) willingness-to-pay-tools
 
     ; find a seller
     let seller one-of artisans with [willingness-to-accept <= max-price and productstock > 0]
@@ -352,11 +357,11 @@ to perform-farming
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set energy energy - energy-to-produce  ; Farming activities consume energy
     set tools tools - tools-to-produce ; Wear of the tools
-    let food-produced random 3  ; Randomly produce between 1 and 3 units of food
-    set productstock productstock + food-produced - 1 ; Add the produced food to the farmer's food stockpile
+    let food-produced random 10  ; Randomly produce between 1 and 3 units of food
+    set productstock productstock + food-produced ; Add the produced food to the farmer's food stockpile
     set food food + 1 ; The farmer keeps food for himself
   ] [
-    set productstock productstock + 0.25 ; Add the produced food to the farmer's food stockpile
+    set productstock productstock + 1 ; Add the produced food to the farmer's food stockpile
     set food food + 1 ; The farmer keeps food for himself
   ]
 end
@@ -364,7 +369,7 @@ end
 to perform-artistry
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set energy energy - energy-to-produce  ; Craftmanship activities consume energy
-    let tools-produced 2 + (random 10 / 10)  ; Randomly produce around 1 units of tools
+    let tools-produced random 10  ; Randomly produce around 1 units of tools
     set productstock productstock + tools-produced; Add the produced tool in the stockpile
   ] [
     ; If the artisan has no energy or tools left, stop producing tools
@@ -374,7 +379,7 @@ end
 to generate-energy
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set tools tools - tools-to-produce ; Wear of the tools
-    let energy-produced random 3 ; Randomly produce between 1 and 3 units of energy
+    let energy-produced random 10 ; Randomly produce between 1 and 3 units of energy
     set productstock productstock + energy-produced; Add the produced energy in the stockpile
   ] [
     ; If the producer has no energy left or tools left, stop extracting energy
@@ -575,6 +580,21 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot sum [money] of turtles"
+
+SLIDER
+25
+166
+197
+199
+global-cost
+global-cost
+0
+100
+14.0
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
