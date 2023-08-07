@@ -57,6 +57,7 @@ to setup
     setxy random-xcor random-ycor
     set color green
 
+    ; virtual food needs are 0 as they produce one for themselve, so agents follow a  011 101 110 consumption pattern. They always need two inputs per turn.
     set energy-to-produce 1
     set tools-to-produce 1
   ]
@@ -87,13 +88,17 @@ to setup
     set tools 10
   ]
 
+  ; set value from graphic input
+  ; NOTE Money is more important than it seems. Having a sufficient mass is necessary for the market to be liquid enough to be stable.
   set-money-per-turtle money-per-turtle
 
   update-costs-to-produce
   set energy-price lput cost-to-produce-energy energy-price
   set tools-price lput cost-to-produce-tools tools-price
   set food-price lput cost-to-produce-food food-price
+
   update-needs
+
   reset-ticks
 end
 
@@ -129,6 +134,7 @@ to go
   update-willingness-to-accept
   update-willingness-to-pay
 
+  ; TO-DO check if more stable with higher number
   let i 0
   while [i < 5] [
     update-needs
@@ -157,6 +163,7 @@ to set-prices
 end
 
 to compute-energy-eq-price
+
   if count energy-producers != 0 [
     ; reset equilibrium price and buyer seller quantities
     let price 0
@@ -176,10 +183,12 @@ end
 
 to compute-food-eq-price
   if count farmers != 0 [
+
     ; reset equilibrium price and buyer seller quantities
     let price 0
     let quantity-buyers count turtles with [willingness-to-pay-food >= price]
     let quantity-sellers count farmers with [willingness-to-accept <= price]
+
     ; compute price for which offer equals demand
     while [quantity-buyers - quantity-sellers > 0 and quantity-sellers < count farmers] [
       set price price + 1
@@ -193,6 +202,7 @@ end
 
 to compute-tools-eq-price
   if count artisans != 0 [
+
     ; reset equilibrium price and buyer seller quantities
     let price 0
     let quantity-buyers count turtles with [willingness-to-pay-tools >= price]
@@ -228,11 +238,16 @@ to update-needs
     set food-utility 1 / ((food + 1) / 10)
     set tool-utility 0
   ]
+
+  ; TO-DO add a utility for money that can be exchanged for some stock product. Like if you have too much stock but miss money, sell at a low price (better than dying of hunger).
+  ; TO-DO maybe add a utility for stock?
 end
 
 to update-costs-to-produce
   ask turtles [
     set cost-to-produce global-cost + random 2 - random 2; to be developed
+    ; NOTE following line creates a positive feedback loop, but I did not find a suitable alternative yet.
+    ; Maybe make the price be regulated by the quantity produced / quantity sold?
     ; set cost-to-produce food-to-produce * (last food-price) + energy-to-produce * (last energy-price) + tools-to-produce * (last tools-price)
   ]
   if count energy-producers != 0 [
@@ -273,10 +288,12 @@ to update-willingness-to-accept
 end
 
 to exchange-goods
-  ; make sure vital needs are met first in case of equality
+  ; make sure vital needs (food) are met first in case of equality.
+  ; exchanges are initiated by the buyers.
+
   ; food
   ; Ask potential buyers
-  ask turtles with [food-utility > 0 and food-utility >= tool-utility and food-utility >= energy-utility] [
+  ask turtles with [food-utility > 1 and food-utility >= tool-utility and food-utility >= energy-utility] [
     let max-price min list (money) willingness-to-pay-food
 
     ; find a seller
@@ -303,10 +320,11 @@ to exchange-goods
 
   ; energy
   ; Ask potential buyers
-  ask turtles with [energy-utility > 0 and energy-utility >= tool-utility and energy-utility >= food-utility] [
+  ask turtles with [energy-utility > 1 and energy-utility >= tool-utility and energy-utility >= food-utility] [
     let max-price min list (money) willingness-to-pay-energy
 
     ; find a seller
+    ; TO DO - make it find the cheapest one (global or local), so that sellers that need money can sell more easily if they agree to lower price
     let seller one-of energy-producers with [willingness-to-accept <= max-price and productstock > 0]
 
     ; if someone accepts the transaction, proceed
@@ -330,7 +348,7 @@ to exchange-goods
 
   ; tools
   ; Ask potential buyers
-  ask turtles with [tool-utility > 0 and tool-utility >= energy-utility and tool-utility >= food-utility] [
+  ask turtles with [tool-utility > 1 and tool-utility >= energy-utility and tool-utility >= food-utility] [
     let max-price min list (money) willingness-to-pay-tools
 
     ; find a seller
@@ -365,9 +383,10 @@ to perform-farming
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set energy energy - energy-to-produce  ; Farming activities consume energy
     set tools tools - tools-to-produce ; Wear of the tools
-    let production 1 + random 3  ; Produce goods
+    let production 1 + random 4  ; Produce goods
     ; NOTE equilibrium criteria (farmers*productions = turtes*food consumption), here farmers take 1 food for themselves, so with 300 turtles they need to produce 2 extra.
-    ; TEMP NOTE Changed to non-random to see if it stabilises wealth accumulation and hence dying of the poor
+    ; NOTE Changed to non-random value of 2 extra stabilises wealth accumulation and hence dying of the poor
+    ; TO-DO look more into why (1 + random 3) is not equivalent to stable 2 over time
     set productstock productstock + production ; Add the produced food to the farmer's food stockpile
     set food food + 1
   ] [
@@ -515,7 +534,7 @@ PLOT
 141
 1575
 268
-mean willingness to pay
+median willingness to pay
 NIL
 NIL
 0.0
@@ -598,23 +617,8 @@ global-cost
 global-cost
 0
 100
-20.0
+38.0
 1
-1
-NIL
-HORIZONTAL
-
-SLIDER
-24
-264
-196
-297
-money-per-turtle
-money-per-turtle
-0
-500
-130.0
-10
 1
 NIL
 HORIZONTAL
@@ -653,6 +657,17 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot mean [money] of turtles"
+
+INPUTBOX
+29
+342
+184
+402
+money-per-turtle
+800.0
+1
+0
+Number
 
 @#$#@#$#@
 ## WHAT IS IT?
