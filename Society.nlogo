@@ -247,7 +247,7 @@ to update-needs
     set stock-utility  (- (stock - 10 ) ^ 3) / 100
   ]
 
-  ; TO-DO add a utility for money that can be exchanged for some stock product. Like if you have too much stock but miss money, sell at a low price (better than dying of hunger).
+  ; TO-DO maybe add a utility for money that can be exchanged for some stock product. Like if you have too much stock but miss money, sell at a low price (better than dying of hunger).
 end
 
 to update-costs-to-produce
@@ -378,6 +378,8 @@ to move
   fd 1
 end
 
+
+; TO-DO change the production to match the needs of the society. Consumption of other input should change accordingly. Margin can be a driver on production.
 to perform-farming
   ifelse energy > energy-to-produce and tools > tools-to-produce [
     set energy energy - energy-to-produce  ; Farming activities consume energy
