@@ -1,213 +1,205 @@
-breed [factories factory]
+breed [firms firm]
 breed [consumers consumer]
 
 globals [
   total-money-consumers
-  total-money-factories
+  total-money-firms
   total-money
-  total-energy
-  total-stock
+
   total-production
+  total-stock
   total-consumption
-  total-pollution ; polution (current)
   total-profit
-  average-price
-  average-wage
-  average-pollution-pu
+
+  market-price
+  market-wage
 ]
 
-factories-own [
-  money  ; fonds de roulement
-  stock  ;
-  tech ; technology chosen
-  pollution-pu ; polution per unit created with the chosen tech
-  cost ; cost per unit created with the chosen tech
-  wage ; wage chosen
-  price  ; price chosen
+firms-own [
+  alpha0 ; coefficient of labour in Production Function
+  alpha1 ; exponent of labour in Production Function
 
+  workers-target
+  workers
+  money
+
+  price
+  wage
+  stock
   production
   sales
   profit
-  pollution
 ]
 
 consumers-own [
-  money  ; Stock of money
-  productivity ;
-  energy ; Stock of energy
-  ecoscore ; Sensibility to ecology
+  money
+  energy
+  satiated
+
+  min-wage ; minimum wage at which consumer will work
+  max-price ; max. price at which consumer will buy
 ]
 
 to setup
   clear-all
   random-seed 1  ; Set the seed
+  set market-price 1
+  set market-wage 1
+
   create-consumers num-consumers [
     set shape "person"
     set color blue
     setxy random-xcor random-ycor
+
     set money 10 ; Assign a random amount of money to each consumer
-    set productivity 1
     set energy 10         ; Start with 10 energy
-    set ecoscore random 10 ; Random ecoscore between O and 10
+    set satiated 100
+    set min-wage 1
+    set max-price 1
   ]
-  create-factories num-factories [
+
+  create-firms num-firms [
     set shape "factory"
     set color red
     set size 2
     setxy random-xcor random-ycor
-    set money 100
+    set money 20
     set stock 0
 
-    set tech one-of ["A" "B" "C"] ; Randomly select A, B, or C
-    set pollution-pu 0
-    set cost 0
-    set wage random 5 + 1 ;
-    set price random 2 + 1 ;
-    set profit 0 ;
-    set pollution 0
+    set alpha0 random 9 + 1; PF coefficient: from 1 to 9
+    set alpha1 (random 5 + 5) / 10 ; PF exponent : from 0.5 to 0.9
+    set wage 1 ;
+    set price 1 ;
 
+    set workers 0
+    set workers-target 0
+    set profit 0 ;
   ]
-  set total-money-consumers sum [money] of consumers
-  set total-money-factories sum [money] of factories
-  set total-pollution 0
-  set total-energy sum [energy] of consumers
-  set total-stock sum [stock] of factories
   reset-ticks
 end
 
 to firms-production-plan
-  ask factories [
-      set stock 0 ; stock depreciates at each tick
-      set production 0
-      set sales 0
-      set pollution 0
-      let nearby-factories factories in-radius 10
-      let highest-profit-factory max-one-of nearby-factories [profit]
-      ifelse highest-profit-factory != nobody and profit < [profit] of highest-profit-factory [
-        set wage [wage] of highest-profit-factory
-        set tech [tech] of highest-profit-factory
-        ; Set pollution-pu based on the chosen technology
-      ifelse tech = "A" [
-      set pollution-pu 2
-      ] [
-       ifelse tech = "B" [
-      set pollution-pu 1
-      ] [
-      ifelse tech = "C" [
-      set pollution-pu 0
-    ] []
-      ; Handle the case when tech is not "A", "B", or "C"
 
-       ; Set cost based on the chosen technology
-      ifelse tech = "A" [
-      set cost 0
-      ] [
-       ifelse tech = "B" [
-      set cost 1
-      ] [
-      ifelse tech = "C" [
-      set cost 2
-    ] [
-      ; Handle the case when tech is not "A", "B", or "C"
-              ]]
+  ask firms [
+    ; Strategy -> 3 possibilities : too much stock (decrease price), out-of-stock (increase price), no workers (increase wages), full workers (decrease wages).
+    if stock > 0 [
+      set price price - 0.1 ; if unsold stock at last period, decrease price
+    ]
+    if sales = production and sales > 0 [
+      set price price + 0.1
+    ]
+    if workers = workers-target and production > 0 [
+      set wage wage + 0.1
+    ]
+    if workers = 0 [
+      set wage wage + 0.1
+    ]
 
-          ]
-        ]
-      ]
-    ][
-      let random-strategy random 7
+    if wage < 0.1 [
+      set wage 0.1
+    ]
+    if price < 0.1 [
+      set price 0.1
+    ]
 
-      if random-strategy = 0 [
-        ; Strategy 1: Switch to a cheaper technology (Tech C)
-        set tech "A"
-        set pollution-pu 2
-        set cost 0
-      ]
-      if random-strategy = 1 [
-        ; Strategy 1: Switch to a cheaper technology (Tech C)
-        set tech "B"
-        set pollution-pu 1
-        set cost 1
-      ]
-      if random-strategy = 2 [
-        ; Strategy 1: Switch to a cheaper technology (Tech C)
-        set tech "C"
-        set pollution-pu 0
-        set cost 2
-      ]
-      if random-strategy = 3 [
-        ; Strategy 2: Increase the price
-        set price price + 0.1
-      ]
-      if random-strategy = 4 [
-        ; Strategy 2: Increase the price
-        set price price - 0.1
-        if price < 0.1 [
-          set price 0.1
-        ]
-      ]
-      if random-strategy = 5 [
-        ; Strategy 3: Reduce wage
+    set workers 0
+    set sales 0
+    set production 0
+    if stock > 10 [
+      set stock 10 * log 10 stock ; depreciation
+    ]
+    set workers-target floor((price * alpha0 * alpha1 / wage) ^ (1 / (1 - alpha1)))
+    if wage * workers-target > money [
+      set workers-target floor(money / wage)
+    ]
+    if workers-target < 0 [
+      set workers-target 0
+    ]
+
+    ; if conditions are not good to produce, decrease wage and increase price for next round.
+    if (alpha0 * workers-target ^ alpha1 * price - wage * workers-target) < 0 or workers-target = 0 [  ; only produce if expected positive profit
+      if(wage > 0.1)[
         set wage wage - 0.1
-        if wage < 0.1 [
-          set wage 0.1
-        ]
       ]
-      if random-strategy = 6 [
-        ; Strategy 3: Reduce wage
-        set wage wage + 0.1
-      ]
-             ]
+      set price price + 0.1
+      set workers-target floor((price * alpha0 * alpha1 / wage) ^ (1 / (1 - alpha1)))
+    ]
+
+    if wage * workers-target > money [
+      set workers-target floor(money / wage)
+    ]
+    if workers-target < 0 [
+      set workers-target 0
+    ]
   ]
 end
 
 
-to consumers-work  ; step 2
+to consumers-find-work  ; step 2
   ask consumers [
-    let consumer-productivity productivity
-    let nearby-factories factories in-radius 20
-    let highest-wage-factory max-one-of nearby-factories [wage]
-    if highest-wage-factory != nobody and [wage] of highest-wage-factory > 0 [
-      set money money + [wage] of highest-wage-factory
-      ask highest-wage-factory [
-        set stock stock + consumer-productivity
-        set production production + consumer-productivity
-        set pollution pollution + consumer-productivity * pollution-pu
+    ifelse energy < 5 [
+      set satiated 0.01
+    ][
+      ifelse energy >= 5 and energy < 20 [
+        set satiated 1
+      ][
+        set satiated 100
+      ]
+    ]
+
+    set min-wage (market-price * satiated)
+
+    let nearby-firms firms in-radius 10
+    let firms-recruiting nearby-firms with [workers-target > workers]
+    show (word "firms-recruiting" firms-recruiting)
+    let highest-wage-firm nobody
+    if any? firms-recruiting [
+      set highest-wage-firm max-one-of firms-recruiting [wage]
+    ]
+
+    if highest-wage-firm != nobody and  min-wage <= ([wage] of highest-wage-firm) [
+      set money money + [wage] of highest-wage-firm
+      ask highest-wage-firm [
+        show (word "firms-recruiting wage" wage)
+        set workers workers + 1
         set money money - wage
       ]
-
     ]
+  ]
+end
+
+to firms-produce
+  ask firms [
+    ; initialize production variables at each tick
+    set stock stock + alpha0 * workers ^ (alpha1)
+    set production alpha0 * workers ^ (alpha1)
   ]
 end
 
 to consumers-buy  ; step 3
   ask consumers [
-    let nearby-factories factories with [stock >= 1] ; in-radius 100
-    let consumer-ecoscore ecoscore
+    set max-price (min-wage / satiated)
 
-    let prefered-factory min-one-of nearby-factories [(price + consumer-ecoscore * pollution-pu)]
+    let nearby-firms firms with [stock >= 1] in-radius 20
+    let prefered-firm min-one-of nearby-firms [price]
 
-    if prefered-factory != nobody [
-      if money < ([price] of prefered-factory) [
-        set energy energy + 1 ; eat grass
-      ]
-      if money >= ([price] of prefered-factory) [
-        let quantity (money / ([price] of prefered-factory))
-
-        if quantity > [stock] of prefered-factory [
-          set quantity [stock] of prefered-factory
+    if prefered-firm != nobody [
+      ifelse money >= ([price] of prefered-firm) and max-price > ([price] of prefered-firm) [
+        let quantity (money / ([price] of prefered-firm))
+        if quantity > [stock] of prefered-firm [
+          set quantity [stock] of prefered-firm
         ]
-
-        set money money - quantity * ([price] of prefered-factory)
+        set money (money - quantity * ([price] of prefered-firm))
         set energy energy + quantity
-        ask prefered-factory [set stock stock - quantity]
-        ask prefered-factory [set sales sales + quantity]
-        ask prefered-factory [set money money + quantity * price]
-
+        ask prefered-firm [set stock stock - quantity]
+        ask prefered-firm [set sales sales + quantity]
+        ask prefered-firm [set money money + quantity * price]
+      ][
+        set energy energy + 0.5; eat grass
       ]
     ]
-    if prefered-factory = nobody [
-      set energy energy + 1
+    if prefered-firm = nobody [
+        set energy energy + 0.5; eat grass
     ]
   ]
 end
@@ -225,47 +217,52 @@ to consumers-move  ; step 4
 end
 
 to calculate-profit-and-redistribute
-  set total-money-factories sum [money] of factories
-  ask factories [
-    set profit (price * sales - wage * production)  ; remaining stock is lost
-    set money money - profit ; profit is distributed
-    ;set stock 0.5 * stock ; depreciation
-  ]
-
-  set total-profit sum [profit] of factories
   set total-money-consumers sum [money] of consumers
+
+  ask firms [
+    set profit (price * sales - wage * workers) ;
+    set money money - profit ; profit is distributed
+    set total-profit sum [profit] of firms
+]
   ask consumers [
-    let profit-share (money / total-money-consumers) * total-profit
-    set money money + profit-share
-  ]
+     let profit-share (money / total-money-consumers) * (total-profit)
+     set money money + profit-share
+
+    if energy > 10 [
+      set energy 10 * log 10 energy ; depreciation
+    ]
+
+]
 end
 
 to go
   firms-production-plan
-  consumers-work
+  consumers-find-work
+  firms-produce
   consumers-buy
   consumers-move
   calculate-profit-and-redistribute
 
-  set num-factories count factories
-  set total-money total-money-consumers + total-money-factories
+  set num-firms count firms
 
-  let sum-price sum [price] of factories
-  let sum-wage sum [wage] of factories
+  set total-money-consumers sum [money] of consumers
+  set total-money-firms sum [money] of firms
+  set total-money total-money-consumers + total-money-firms
 
-  set total-stock sum [stock] of factories
+  let sum-sales sum [sales] of firms
+  let sum-workers sum [workers] of firms
+  let sum-price sum [price * sales] of firms
+  let sum-wage sum [wage * workers] of firms
 
-  set total-production sum [production] of factories
-  set total-pollution sum [pollution] of factories
+  set total-stock sum [stock] of firms
+  set total-production sum [production] of firms
+  set total-profit sum [profit] of firms
 
-  set average-pollution-pu ifelse-value (total-production > 0) [total-pollution / total-production] [0]
-  set average-price ifelse-value (num-factories > 0) [sum-price / num-factories] [0]
-  set average-wage ifelse-value (num-factories > 0) [sum-wage / num-factories] [0]
+  set market-price ifelse-value (sum-sales > 0) [sum-price / sum-sales] [1]
+  set market-wage ifelse-value (sum-workers > 0) [sum-wage / sum-workers] [1]
 
-  show (word "Average Wage: " average-wage)
-  show (word "Average Price: " average-price)
-  show (word "Average pollution-pu: " average-pollution-pu)
-
+  show (word "Sales: " sum-sales)
+  show (word "Total profit: " total-profit)
   tick
 end
 @#$#@#$#@
@@ -365,7 +362,7 @@ false
 "" ""
 PENS
 "consumers" 1.0 0 -14070903 true "" "plot total-money-consumers"
-"producers" 1.0 0 -2674135 true "" "plot total-money-factories"
+"producers" 1.0 0 -2674135 true "" "plot total-money-firms"
 "total" 1.0 0 -7500403 true "" "plot total-money"
 
 BUTTON
@@ -385,24 +382,6 @@ NIL
 NIL
 1
 
-PLOT
-970
-337
-1170
-487
-Average pollution pu
-time
-count
-0.0
-10.0
-0.0
-10.0
-true
-false
-"" ""
-PENS
-"default" 1.0 0 -16777216 true "" "plot average-pollution-pu"
-
 SLIDER
 18
 115
@@ -412,7 +391,7 @@ num-consumers
 num-consumers
 0
 100
-100.0
+10.0
 1
 1
 NIL
@@ -423,10 +402,10 @@ SLIDER
 161
 190
 194
-num-factories
-num-factories
+num-firms
+num-firms
 0
-100
+50
 10.0
 1
 1
@@ -434,11 +413,11 @@ NIL
 HORIZONTAL
 
 PLOT
-1204
-337
-1404
-487
-Average price pu
+961
+339
+1161
+493
+market-price
 time
 price
 0.0
@@ -449,7 +428,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot average-price"
+"default" 1.0 0 -16777216 true "" "plot market-price"
 
 PLOT
 1199
@@ -474,7 +453,40 @@ PLOT
 337
 946
 487
-Average wage
+market-wage
+NIL
+NIL
+0.0
+10.0
+0.0
+2.0
+true
+false
+"" ""
+PENS
+"default" 1.0 0 -16777216 true "" "plot market-wage"
+
+SLIDER
+25
+276
+197
+309
+eco-sensitivity
+eco-sensitivity
+0
+5
+0.0
+0.1
+1
+NIL
+HORIZONTAL
+
+PLOT
+1422
+173
+1622
+323
+Total production
 NIL
 NIL
 0.0
@@ -485,7 +497,7 @@ true
 false
 "" ""
 PENS
-"default" 1.0 0 -16777216 true "" "plot average-wage"
+"default" 1.0 0 -16777216 true "" "plot total-production"
 
 @#$#@#$#@
 ## WHAT IS IT?
