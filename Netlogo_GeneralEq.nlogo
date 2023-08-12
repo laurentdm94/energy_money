@@ -82,16 +82,16 @@ to firms-production-plan
 
   ask firms [
     ; Strategy -> 3 possibilities : too much stock (decrease price), out-of-stock (increase price), no workers (increase wages), full workers (decrease wages).
-    if stock > 0 [
+    if stock > 20 [
       set price price - 0.1 ; if unsold stock at last period, decrease price
     ]
     if sales = production and sales > 0 [
       set price price + 0.1
     ]
-    if workers = workers-target and production > 0 [
-      set wage wage + 0.1
+    if workers = workers-target [
+      set wage wage - 0.1
     ]
-    if workers = 0 [
+    if workers = 0 and workers-target > 0 [
       set wage wage + 0.1
     ]
 
@@ -117,18 +117,7 @@ to firms-production-plan
     ]
 
     ; if conditions are not good to produce, decrease wage and increase price for next round.
-    if (alpha0 * workers-target ^ alpha1 * price - wage * workers-target) < 0 or workers-target = 0 [  ; only produce if expected positive profit
-      if(wage > 0.1)[
-        set wage wage - 0.1
-      ]
-      set price price + 0.1
-      set workers-target floor((price * alpha0 * alpha1 / wage) ^ (1 / (1 - alpha1)))
-    ]
-
-    if wage * workers-target > money [
-      set workers-target floor(money / wage)
-    ]
-    if workers-target < 0 [
+    if (alpha0 * workers-target ^ alpha1 * price - wage * workers-target) < 0 [  ; only produce if expected positive profit
       set workers-target 0
     ]
   ]
@@ -138,20 +127,20 @@ end
 to consumers-find-work  ; step 2
   ask consumers [
     ifelse energy < 5 [
-      set satiated 0.01
+      set satiated 0.1
     ][
       ifelse energy >= 5 and energy < 20 [
         set satiated 1
       ][
-        set satiated 100
+        set satiated 10
       ]
     ]
 
-    set min-wage (market-price * satiated)
+    set min-wage ((market-price * satiated) / 10 )
 
-    let nearby-firms firms in-radius 10
+    let nearby-firms firms in-radius 20
     let firms-recruiting nearby-firms with [workers-target > workers]
-    show (word "firms-recruiting" firms-recruiting)
+    ;show (word "firms-recruiting" firms-recruiting)
     let highest-wage-firm nobody
     if any? firms-recruiting [
       set highest-wage-firm max-one-of firms-recruiting [wage]
@@ -160,7 +149,7 @@ to consumers-find-work  ; step 2
     if highest-wage-firm != nobody and  min-wage <= ([wage] of highest-wage-firm) [
       set money money + [wage] of highest-wage-firm
       ask highest-wage-firm [
-        show (word "firms-recruiting wage" wage)
+        ;show (word "firms-recruiting wage" wage)
         set workers workers + 1
         set money money - wage
       ]
@@ -178,9 +167,9 @@ end
 
 to consumers-buy  ; step 3
   ask consumers [
-    set max-price (min-wage / satiated)
+    set max-price ((min-wage / satiated) * 100 )
 
-    let nearby-firms firms with [stock >= 1] in-radius 20
+    let nearby-firms firms with [stock > 0] in-radius 20
     let prefered-firm min-one-of nearby-firms [price]
 
     if prefered-firm != nobody [
@@ -217,15 +206,17 @@ to consumers-move  ; step 4
 end
 
 to calculate-profit-and-redistribute
-  set total-money-consumers sum [money] of consumers
 
   ask firms [
     set profit (price * sales - wage * workers) ;
     set money money - profit ; profit is distributed
     set total-profit sum [profit] of firms
-]
+  ]
+
+  set total-money-consumers sum [money] of consumers
   ask consumers [
-     let profit-share (money / total-money-consumers) * (total-profit)
+
+     let profit-share ifelse-value (total-money-consumers > 0) [((money / total-money-consumers) * (total-profit))] [((1 / num-consumers) * (total-profit))]
      set money money + profit-share
 
     if energy > 10 [
@@ -261,8 +252,8 @@ to go
   set market-price ifelse-value (sum-sales > 0) [sum-price / sum-sales] [1]
   set market-wage ifelse-value (sum-workers > 0) [sum-wage / sum-workers] [1]
 
-  show (word "Sales: " sum-sales)
-  show (word "Total profit: " total-profit)
+  show (word "total-profit" total-profit)
+
   tick
 end
 @#$#@#$#@
@@ -391,7 +382,7 @@ num-consumers
 num-consumers
 0
 100
-10.0
+50.0
 1
 1
 NIL
@@ -406,7 +397,7 @@ num-firms
 num-firms
 0
 50
-10.0
+25.0
 1
 1
 NIL
@@ -423,7 +414,7 @@ price
 0.0
 10.0
 0.0
-5.0
+2.0
 true
 false
 "" ""
