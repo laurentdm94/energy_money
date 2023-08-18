@@ -85,7 +85,7 @@ to firms-production-plan
 
   ask firms [
     ; Strategy -> 3 possibilities : too much stock (decrease price), out-of-stock (increase price), no workers (increase wages), full workers (decrease wages).
-    if stock > 20 or sales = 0 [
+    if stock > 20 [
       set price price - 0.1 ; if unsold stock at last period, decrease price
     ]
     if sales = production and sales > 0 [
@@ -108,9 +108,8 @@ to firms-production-plan
     set workers 0
     set sales 0
     set production 0
-    if stock > 10 [
-      set stock 10 * log 10 stock ; depreciation
-    ]
+    set stock 0.85 * stock ; stock depreciation
+
     set workers-target floor((price * alpha0 * alpha1 / wage) ^ (1 / (1 - alpha1)))
     if wage * workers-target > money [
       set workers-target floor(money / wage)
@@ -224,7 +223,7 @@ to calculate-profit-and-redistribute
   set total-profit sum [profit] of firms with [profit > 0]
 
   ask firms [
-    if money <= 0.1 or (workers-target = 0 and stock = 0)
+    if money <= 0.1 or (workers-target = 0 and stock < 0.05)
     [
       set profit money - 20
       set money 20
