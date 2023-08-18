@@ -13,6 +13,9 @@ globals [
 
   market-price
   market-wage
+
+  avg-alpha0
+  avg-alpha1
 ]
 
 firms-own [
@@ -209,8 +212,26 @@ to calculate-profit-and-redistribute
 
   ask firms [
     set profit (price * sales - wage * workers) ;
-    set money money - profit ; profit is distributed
-    set total-profit sum [profit] of firms
+    if profit > 0 [
+      set money money - profit ; profit is distributed
+    ]
+  ]
+
+  set total-profit sum [profit] of firms with [profit > 0]
+
+  ask firms [
+    if money <= 0.1 or (workers-target = 0 and stock = 0)
+    [
+      set profit money - 20
+      set money 20
+      set total-profit total-profit + profit
+
+      setxy random-xcor random-ycor
+      set alpha0 random 9 + 1; PF coefficient: from 1 to 9
+      set alpha1 (random 5 + 5) / 10 ; PF exponent : from 0.5 to 0.9
+      set wage market-wage ;
+      set price market-price ;
+    ]
   ]
 
   set total-money-consumers sum [money] of consumers
@@ -252,7 +273,8 @@ to go
   set market-price ifelse-value (sum-sales > 0) [sum-price / sum-sales] [1]
   set market-wage ifelse-value (sum-workers > 0) [sum-wage / sum-workers] [1]
 
-  show (word "total-profit" total-profit)
+  set avg-alpha0 mean [alpha0] of firms
+  set avg-alpha1 mean [alpha1] of firms
 
   tick
 end
@@ -489,6 +511,25 @@ false
 "" ""
 PENS
 "default" 1.0 0 -16777216 true "" "plot total-production"
+
+PLOT
+750
+173
+950
+323
+alpha0 and alpha1
+NIL
+NIL
+0.0
+10.0
+0.0
+10.0
+true
+true
+"" ""
+PENS
+"alpha0" 1.0 0 -11221820 true "" "plot avg-alpha0"
+"alpha1" 1.0 0 -13840069 true "" "plot avg-alpha1"
 
 @#$#@#$#@
 ## WHAT IS IT?
