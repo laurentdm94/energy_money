@@ -85,7 +85,7 @@ to firms-production-plan
 
   ask firms [
     ; Strategy -> 3 possibilities : too much stock (decrease price), out-of-stock (increase price), no workers (increase wages), full workers (decrease wages).
-    if stock > 20 [
+    if stock > 20 or sales = 0 [
       set price price - 0.1 ; if unsold stock at last period, decrease price
     ]
     if sales = production and sales > 0 [
@@ -202,6 +202,10 @@ to consumers-move  ; step 4
     if energy < 0 [
       die ; Consumer dies if energy goes below zero
     ]
+    if energy > 10 [
+      set energy 10 * log 10 energy ; depreciation
+    ]
+
     right random 30
     left random 30
     fd 1
@@ -239,12 +243,7 @@ to calculate-profit-and-redistribute
 
      let profit-share ifelse-value (total-money-consumers > 0) [((money / total-money-consumers) * (total-profit))] [((1 / num-consumers) * (total-profit))]
      set money money + profit-share
-
-    if energy > 10 [
-      set energy 10 * log 10 energy ; depreciation
-    ]
-
-]
+  ]
 end
 
 to go
